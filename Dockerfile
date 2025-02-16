@@ -73,7 +73,8 @@ RUN --mount=type=cache,target=/var/cache/apk \
 		ctop \
 		termshark \
 		grpcurl \
-        zip
+        zip \
+        coreutils
 
 RUN bash <<EOF
 
@@ -93,6 +94,9 @@ COPY zshrc /root/.zshrc
 COPY p10k.zsh /root/.p10k.zsh
 COPY --chmod=755 transfer.sh /root/bin/transfer.sh
 
+WORKDIR /root
+CMD [ "/bin/zsh" ]
+
 FROM base AS docker
 
 RUN --mount=type=cache,target=/var/cache/apk \
@@ -102,5 +106,3 @@ FROM base AS nerdctl
 
 RUN --mount=type=cache,target=/var/cache/apk \
     apk add nerdctl
-
-ENTRYPOINT [ "zsh" ]
