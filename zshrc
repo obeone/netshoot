@@ -454,3 +454,6 @@ fi
 alias docker-build-run='docker build . -t $(basename "$PWD" | tr " " "_") && docker run -it --rm $(basename "$PWD" | tr " " "_")'
 ZSH_AUTOSUGGEST_IGNORE_WIDGETS+=(bracketed-paste)
 
+if [[ "$TERM" == "xterm" ]]; then
+  export TERM=xterm-kitty
+fi
