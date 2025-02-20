@@ -95,7 +95,8 @@ COPY p10k.zsh /root/.p10k.zsh
 COPY --chmod=755 transfer.sh /root/bin/transfer.sh
 
 WORKDIR /root
-CMD [ "/bin/zsh" ]
+
+CMD [ "bash", "-c", "zsh; exit 0" ]
 
 FROM base AS docker
 
@@ -106,3 +107,11 @@ FROM base AS nerdctl
 
 RUN --mount=type=cache,target=/var/cache/apk \
     apk add nerdctl
+
+FROM base AS podman
+
+RUN --mount=type=cache,target=/var/cache/apk \
+    apk add podman fuse-overlayfs
+
+COPY podman-storage.conf /root/.config/containers/storage.conf
+
