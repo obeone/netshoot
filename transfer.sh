@@ -20,7 +20,7 @@
 set -e
 
 # Environment defaults
-: ${TRANSFERSH_URL:="https://transfersh.containers.obeone.org"}
+: ${TRANSFERSH_URL:="https://transfer.obeone.cloud"}
 : ${TRANSFERSH_MAX_DAYS:=}
 : ${TRANSFERSH_MAX_DOWNLOADS:=}
 : ${LOG_LEVEL:="INFO"}
