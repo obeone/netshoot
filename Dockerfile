@@ -74,7 +74,8 @@ RUN --mount=type=cache,target=/var/cache/apk \
 		termshark \
 		grpcurl \
         zip \
-        coreutils
+        coreutils \
+        e2fsprogs
 
 RUN bash <<EOF
 
