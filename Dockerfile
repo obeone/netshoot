@@ -92,9 +92,9 @@ git clone --depth 1 https://github.com/zdharma-continuum/fast-syntax-highlightin
 
 EOF
 
-COPY zshrc /root/.zshrc
-COPY p10k.zsh /root/.p10k.zsh
-COPY --chmod=755 transfer.sh /usr/local/bin/transfer.sh
+COPY configs/zshrc /root/.zshrc
+COPY configs/p10k.zsh /root/.p10k.zsh
+COPY --chmod=755 tools/transfer.sh /usr/local/bin/transfer.sh
 
 WORKDIR /root
 
@@ -115,5 +115,5 @@ FROM base AS podman
 RUN --mount=type=cache,target=/var/cache/apk \
     apk add podman fuse-overlayfs
 
-COPY podman-storage.conf /root/.config/containers/storage.conf
+COPY configs/podman-storage.conf /root/.config/containers/storage.conf
 
