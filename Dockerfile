@@ -75,7 +75,8 @@ RUN --mount=type=cache,target=/var/cache/apk \
 		grpcurl \
         zip \
         coreutils \
-        e2fsprogs
+        e2fsprogs \
+        gptfdisk
 
 RUN bash <<EOF
 
@@ -93,7 +94,7 @@ EOF
 
 COPY zshrc /root/.zshrc
 COPY p10k.zsh /root/.p10k.zsh
-COPY --chmod=755 transfer.sh /root/bin/transfer.sh
+COPY --chmod=755 transfer.sh /usr/local/bin/transfer.sh
 
 WORKDIR /root
 
@@ -102,7 +103,7 @@ CMD [ "bash", "-c", "zsh; exit 0" ]
 FROM base AS docker
 
 RUN --mount=type=cache,target=/var/cache/apk \
-    apk add docker-cli
+    apk add docker-cli docker-cli-buildx docker-zsh-completion docker-cli-compose
 
 FROM base AS nerdctl
 
