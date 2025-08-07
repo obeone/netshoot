@@ -1,0 +1,40 @@
+# syntax=docker/dockerfile:1
+#
+# Netshoot-slim: A minimal Docker image for network troubleshooting.
+#
+
+# ==============================================================================
+# Base Stage: Debian Bookworm Slim with a minimal toolset
+# ==============================================================================
+FROM debian:bookworm-slim
+
+# Set environment variables for terminal, locale, and non-interactive apt.
+ENV TERM=xterm-kitty \
+    LANG=en_US.UTF-8 \
+    DEBIAN_FRONTEND=noninteractive
+
+# Configure apt to keep downloaded packages in the cache.
+# This leverages BuildKit caching to speed up subsequent builds.
+RUN rm -f /etc/apt/apt.conf.d/docker-clean && \
+    echo 'Binary::apt::APT::Keep-Downloaded-Packages "true";' > /etc/apt/apt.conf.d/keep-cache
+
+# Install a minimal set of essential utilities for networking.
+# The --no-install-recommends flag avoids installing unnecessary packages.
+# After installation, the apt cache is cleaned to keep the image size small.
+RUN --mount=type=cache,target=/var/cache/apt,id=apt-${TARGETARCH} \
+    --mount=type=cache,target=/var/lib/apt,id=apt-${TARGETARCH} \
+    apt-get update && \
+    apt-get full-upgrade -y && \
+    apt-get install -y --no-install-recommends \
+    # Core networking tools
+    iproute2 \
+    iputils-ping \
+    traceroute \
+    dnsutils \
+    curl \
+    wget \
+    netcat-openbsd \
+    tcpdump
+
+# Set the default command to an interactive bash shell.
+CMD ["/bin/bash"]

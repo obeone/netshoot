@@ -38,7 +38,7 @@ RUN --mount=type=cache,target=/var/cache/apt,id=apt-${TARGETARCH} \
     # Networking Tools
     apache2-utils bird bridge-utils conntrack curl dhcping dnsutils ethtool fping httpie iftop iperf iperf3 iproute2 ipset iptables iputils-ping ipvsadm mtr netcat-openbsd nftables ngrep nmap openssh-client socat speedtest-cli swaks tcpdump tcptraceroute termshark tshark traceroute wireguard-tools whois bind9-utils telnet wget net-tools \
     # System & Shell Utilities
-    bash coreutils ca-certificates e2fsprogs file fzf gdisk git jq openssl python3-pip python3-setuptools pipx strace sudo util-linux vim zsh zip unzip btop procps kitty-terminfo htop tmux screen rsync fail2ban logrotate ncdu sysstat lsof nmon nfs-common lynx magic-wormhole iotop
+    bash coreutils ca-certificates e2fsprogs file fzf gdisk git jq openssl python3-pip python3-setuptools strace sudo util-linux vim zsh zip unzip btop procps kitty-terminfo htop tmux screen rsync fail2ban logrotate ncdu sysstat lsof nmon nfs-common lynx magic-wormhole iotop
 
 # Install 'uv', a fast Python package installer from Astral.
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /usr/local/bin/
