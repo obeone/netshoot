@@ -1,0 +1,362 @@
+# ==============================================================================
+# Zsh Configuration File (.zshrc)
+# ==============================================================================
+#
+# This file configures the Zsh shell environment, including Oh My Zsh,
+# Powerlevel10k, plugins, aliases, and custom functions.
+#
+
+# Profile Zsh startup time for performance analysis.
+zmodload zsh/zprof
+
+# ==============================================================================
+# Powerlevel10k Instant Prompt
+# ==============================================================================
+# This block enables Powerlevel10k's instant prompt feature for faster startup.
+# It must be placed near the top of the file. Any initialization code that
+# requires user input should go above this block.
+# ==============================================================================
+if [[ -r "${XDG_CACHE_HOME:-$HOME/.cache}/p10k-instant-prompt-${(%):-%n}.zsh" ]]; then
+    source "${XDG_CACHE_HOME:-$HOME/.cache}/p10k-instant-prompt-${(%):-%n}.zsh"
+fi
+
+# ==============================================================================
+# Local and Secret Configurations
+# ==============================================================================
+# Source local and secret configuration files if they exist.
+# These files are not version-controlled and can be used for machine-specific
+# or sensitive settings.
+# ==============================================================================
+if [[ -f "$HOME/.zshrc.local" ]]; then
+    source "$HOME/.zshrc.local"
+fi
+
+if [[ -f "$HOME/.zshrc.secrets" ]]; then
+    source "$HOME/.zshrc.secrets"
+fi
+
+# ==============================================================================
+# Environment Variables
+# ==============================================================================
+# Configure environment variables for paths, editors, and tools.
+# ==============================================================================
+
+# Add local binary directories to the PATH.
+export PATH="$HOME/bin:$HOME/.local/bin:$PATH"
+export PATH="${KREW_ROOT:-$HOME/.krew}/bin:$PATH"
+export PATH="$PATH:$HOME/.local/go_workspace/bin/"
+
+# Set the preferred editor. Use a terminal-based editor for SSH sessions.
+if [[ -n $SSH_CONNECTION ]]; then
+    export EDITOR='vim'
+else
+    export EDITOR='code-as-editor'
+fi
+
+# Disable mouse support in Vim.
+export VIMINIT='set mouse='
+
+# Fix Punycode errors with Bitwarden CLI.
+export NODE_OPTIONS="--no-deprecation"
+
+# Enable fast Hugging Face Hub transfers.
+export HF_HUB_ENABLE_HF_TRANSFER=1
+
+# Disable telemetry for various tools.
+export DISABLE_TELEMETRY=true
+export OLLAMA_NOHISTORY=true
+
+# Configure Shell GPT.
+export OPENAI_BASE_URL=https://api.openai.com/v1
+
+# Configure Secretive for the SSH agent (macOS).
+#
+# NOTE:
+# - This is machine-specific.
+# - Prefer setting SSH_AUTH_SOCK in ~/.zshrc.local or via your login/session manager.
+# - We only set it if SSH_AUTH_SOCK isn't already defined.
+if [[ -z "${SSH_AUTH_SOCK:-}" ]]; then
+    _secretive_sock="$HOME/Library/Containers/com.maxgoedjen.Secretive.SecretAgent/Data/socket.ssh"
+    if [[ -S "$_secretive_sock" ]]; then
+        export SSH_AUTH_SOCK="$_secretive_sock"
+    fi
+    unset _secretive_sock
+fi
+
+# Configure Lando PATH.
+#
+# NOTE: This is user/machine-specific and should remain portable (avoid hard-coded usernames).
+if [[ -d "$HOME/.lando/bin" ]]; then
+    export PATH="$HOME/.lando/bin${PATH+:$PATH}"
+fi
+
+# ==============================================================================
+# Oh My Zsh Configuration
+# ==============================================================================
+# Configure Oh My Zsh, including its path, theme, and plugins.
+# ==============================================================================
+
+# Path to the Oh My Zsh installation.
+export ZSH="$HOME/.oh-my-zsh"
+
+# Set the theme. Powerlevel10k is recommended.
+ZSH_THEME="powerlevel10k/powerlevel10k"
+
+# Disable magic functions that can interfere with pasting.
+DISABLE_MAGIC_FUNCTIONS="true"
+
+# Disable auto-setting the terminal title.
+DISABLE_AUTO_TITLE="true"
+
+# Disable command auto-correction.
+ENABLE_CORRECTION="false"
+
+# Set the timestamp format for the `history` command.
+HIST_STAMPS="dd/mm/yyyy"
+
+# Configure web search engines for the `web-search` plugin.
+#
+# NOTE: Custom/internal URLs can be sensitive metadata in public repos.
+# Override this array in ~/.zshrc.local if you want a private/self-hosted endpoint.
+if [[ -z "${ZSH_WEB_SEARCH_ENGINES+x}" ]]; then
+    ZSH_WEB_SEARCH_ENGINES=(
+        ddg 'https://duckduckgo.com/?q='
+    )
+fi
+
+# Define the list of Oh My Zsh plugins to load.
+plugins=(
+    git
+    kubectl
+    command-not-found
+    helm
+    copyfile
+    web-search
+    git-flow
+    python
+    pip
+    colorize
+    git-commit
+    zsh-autosuggestions
+    zsh-navigation-tools
+    sudo
+    brew
+    colored-man-pages
+    dirhistory
+    grc
+    gnu-utils
+    zsh-completions
+    fast-syntax-highlighting
+    fzf
+)
+
+# Add the `bgnotify` plugin if on macOS or a DBUS session is available.
+if [[ "$OSTYPE" == darwin* || -e "$DBUS_SESSION_BUS_ADDRESS" ]]; then
+    plugins+=(bgnotify)
+fi
+
+# Source the Oh My Zsh script to load it.
+source "$ZSH/oh-my-zsh.sh"
+
+# ==============================================================================
+# Aliases
+# ==============================================================================
+# Define custom aliases for common commands.
+# ==============================================================================
+
+# --- Container Tools ---
+# These aliases provide shortcuts for the most common container engine (Docker,
+# nerdctl, or Podman), abstracting away the specific command.
+
+# _container_logs_with_default
+#
+# Helper function to get logs with a default line count.
+#
+# Arguments:
+#   $1 - The container engine command (docker, podman, etc.)
+#   $* - Other arguments to pass to the logs command.
+#
+_container_logs_with_default() {
+    local engine="$1"
+    shift
+    local args=("$@")
+    if [[ ! " ${args[@]} " =~ " -n " ]]; then
+        args+=("-n" "100")
+    fi
+    "$engine" logs "${args[@]}"
+}
+
+if command -v docker &>/dev/null; then
+    alias drit='docker run -ti --rm'
+    alias diel='docker exec -it $(docker ps -ql)'
+    alias dc='docker compose'
+    alias dl='_container_logs_with_default docker'
+    compdef _docker dl=docker
+elif command -v nerdctl &>/dev/null; then
+    alias docker='nerdctl'
+    alias drit='nerdctl run -ti --rm'
+    alias diel='nerdctl exec -it $(nerdctl ps -ql)'
+    alias dc='nerdctl compose'
+    alias dl='_container_logs_with_default nerdctl'
+    compdef _docker dl=nerdctl
+elif command -v podman &>/dev/null; then
+    alias docker='podman'
+    alias drit='podman run -ti --rm'
+    alias diel='podman exec -it $(podman ps -ql)'
+    alias dc='podman compose'
+    alias dl='_container_logs_with_default podman'
+    compdef _docker dl=podman
+fi
+
+# --- Kitty Terminal ---
+if [[ "$TERM" == "xterm-kitty" || "$TERM" == "kitty" ]]; then
+    alias s='kitty +kitten ssh --kitten share_connections=yes'
+    compdef _ssh s
+    alias hg='kitty +kitten hyperlinked_grep'
+    compdef _rg hg
+    alias cb='kitty +kitten clipboard'
+    alias d='kitty +kitten diff'
+    alias icat='kitty +kitten icat'
+    alias transfer='kitty +kitten transfer'
+    alias edit='kitten edit-in-kitty --type background'
+    alias notify='kitten notify'
+    export EDITOR="kitten edit-in-kitty --type background"
+elif [[ "$WARP_IS_LOCAL_SHELL_SESSION" == "1" ]]; then
+    alias s="ssh"
+fi
+
+# --- Python Virtual Environments ---
+alias pyenv="if [ ! -d .venv ]; then python3 -m venv .venv; fi && source .venv/bin/activate && if [ -f requirements.txt ]; then pip install -Ur requirements.txt; fi"
+alias pyenv_tmp="tmp_dir=$(mktemp -d) && cd \$tmp_dir && python3 -m venv .venv && source .venv/bin/activate"
+
+# --- AI & Telemetry ---
+alias i='interpreter --disable_telemetry'
+alias interpreter='interpreter --disable_telemetry'
+alias gpt='sgpt'
+
+# --- Miscellaneous ---
+alias tmp='mkdir -p ~/tmp; cd ~/tmp'
+alias sk='ssh-keygen -R'
+alias find="noglob find" # Disable globbing for the find command.
+alias docker-build-run='docker build . -t $(basename "$PWD" | tr " " "_") && docker run -it --rm $(basename "$PWD" | tr " " "_")'
+
+# ==============================================================================
+# Functions
+# ==============================================================================
+# Define custom functions for more complex tasks.
+# ==============================================================================
+
+# cat
+#
+# Colorize `cat` output if `colorize` is installed.
+#
+if command -v colorize_cat >/dev/null 2>&1 && colorize_check_requirements; then
+    function cat() {
+        if [[ -t 1 ]]; then
+            colorize_cat "$@"
+        else
+            /usr/bin/env cat "$@"
+        fi
+    }
+fi
+
+# sjs
+#
+# Restart a systemd service and follow its logs.
+#
+sjs() {
+    sudo systemctl restart "$1" &
+    sudo journalctl -fu "$1"
+}
+
+# ==============================================================================
+# Third-Party Tool Integrations
+# ==============================================================================
+# Configure integrations with tools like Conda, Neovim, Atuin, and AI shells.
+# ==============================================================================
+
+# --- Conda ---
+if command -v conda >/dev/null 2>&1; then
+    eval "$(conda "shell.$(basename "${SHELL}")" hook)"
+fi
+
+# --- Neovim ---
+if command -v nvim >/dev/null 2>&1; then
+    alias vi=nvim
+fi
+
+# --- Atuin History ---
+if [ -z "$HIST_IGNORE_ALL" ]; then
+    if command -v atuin >/dev/null 2>&1; then
+        eval "$(atuin init zsh --disable-up-arrow)"
+        export ZSH_AUTOSUGGEST_STRATEGY=(atuin completion)
+    fi
+    # Alias to start a new shell with history disabled.
+    alias histoff='env HIST_IGNORE_ALL=true zsh'
+else
+    # Disable history saving.
+    export HISTFILE=/dev/null
+    # Alias to exit the history-disabled shell.
+    alias histon='exit'
+fi
+
+# --- Shell GPT Integration (Ctrl+L) ---
+_sgpt_zsh() {
+    if [[ -n "$BUFFER" ]]; then
+        local _sgpt_prev_cmd=$BUFFER
+        print -P "\e[90m# $_sgpt_prev_cmd\e[0m"
+        BUFFER+="⌛"
+        zle -I && zle redisplay
+        BUFFER=$(sgpt --shell --no-interaction <<< "$_sgpt_prev_cmd")
+        zle end-of-line
+    fi
+}
+zle -N _sgpt_zsh
+bindkey '^l' _sgpt_zsh
+
+# --- AiChat Integration (Alt+E) ---
+_aichat_zsh() {
+    if [[ -n "$BUFFER" ]]; then
+        local _old=$BUFFER
+        BUFFER+="⌛"
+        zle -I && zle redisplay
+        BUFFER=$(aichat -e "$_old" 2>>/tmp/aichat_debug.log)
+        zle end-of-line
+    fi
+}
+zle -N _aichat_zsh
+bindkey '\ee' _aichat_zsh
+
+# --- Shell GPT Docker Fallback ---
+if ! command -v sgpt >/dev/null 2>&1; then
+    alias sgpt='docker run --rm -ti \
+    --env OPENAI_API_KEY=$OPENAI_API_KEY \
+    --env OS_NAME=$(uname -s) \
+    --env SHELL_NAME=$(echo $SHELL) \
+    --env DEFAULT_MODEL=gpt-4o \
+    --volume gpt-cache:/tmp/shell_gpt \
+    -v "$PWD:$PWD" \
+    -v $HOME/.config/shell_gpt:/root/.config/shell_gpt/ \
+    --workdir "$PWD" \
+    ghcr.io/ther1d/shell_gpt'
+fi
+
+# ==============================================================================
+# Finalization
+# ==============================================================================
+# Source Powerlevel10k and other final configuration steps.
+# ==============================================================================
+
+# Source the Powerlevel10k theme configuration.
+[[ ! -f ~/.p10k.zsh ]] || source ~/.p10k.zsh
+
+# Fix for bracketed paste issues with zsh-autosuggest.
+ZSH_AUTOSUGGEST_IGNORE_WIDGETS+=(bracketed-paste)
+
+# Ensure TERM is set correctly for Kitty.
+if [[ "$TERM" == "xterm" ]]; then
+    export TERM=xterm-kitty
+fi
+
+# Fig post block. Keep at the very bottom of this file.
+[[ -f "$HOME/.fig/shell/zshrc.post.zsh" ]] && builtin source "$HOME/.fig/shell/zshrc.post.zsh"
