@@ -16,6 +16,11 @@ FROM debian:trixie AS base
 
 ARG TARGETARCH
 
+# Metadata labels
+LABEL org.opencontainers.image.authors="Grégoire Compagnon <obeone@obeone.org>"
+LABEL org.opencontainers.image.description="Network troubleshooting toolkit with Docker/Podman/nerdctl"
+LABEL org.opencontainers.image.source="https://github.com/obeone/netshoot"
+
 # Set environment variables for terminal, locale, and non-interactive apt.
 ENV TERM=xterm-kitty \
     LANG=en_US.UTF-8 \
@@ -29,22 +34,63 @@ RUN <<EOT
 EOT
 
 # Upgrade all packages to their latest versions.
-# Uses BuildKit cache mounts to accelerate the process.
-RUN --mount=type=cache,target=/var/cache/apt,id=apt-${TARGETARCH} \
-    --mount=type=cache,target=/var/lib/apt,id=apt-${TARGETARCH} \
+# Uses BuildKit cache mounts with sharing=locked for parallel builds safety.
+RUN --mount=type=cache,target=/var/cache/apt,id=apt-${TARGETARCH},sharing=locked \
+    --mount=type=cache,target=/var/lib/apt,id=apt-${TARGETARCH},sharing=locked \
     <<EOT
+    set -eux
     apt-get update
     apt-get full-upgrade -y
 EOT
 
 # Install a comprehensive set of essential utilities for networking and system administration.
-# Uses BuildKit cache mounts for faster installation.
-RUN --mount=type=cache,target=/var/cache/apt,id=apt-${TARGETARCH} \
-    --mount=type=cache,target=/var/lib/apt,id=apt-${TARGETARCH} \
+# Organized by stability: core utilities first, then specialized tools.
+RUN --mount=type=cache,target=/var/cache/apt,id=apt-${TARGETARCH},sharing=locked \
+    --mount=type=cache,target=/var/lib/apt,id=apt-${TARGETARCH},sharing=locked \
     bash <<'EOT'
     set -eux
 
-    # Define package lists
+    # Core system tools (rarely change)
+    CORE_TOOLS=(
+        bash
+        ca-certificates
+        coreutils
+        curl
+        file
+        git
+        gnupg
+        openssl
+        procps
+        sudo
+        unzip
+        util-linux
+        vim
+        wget
+        zip
+        zsh
+    )
+
+    # System monitoring and utilities
+    SYSTEM_TOOLS=(
+        btop
+        dstat
+        fzf
+        htop
+        iotop
+        jq
+        kitty-terminfo
+        lsof
+        magic-wormhole
+        ncdu
+        nfs-common
+        python3-pip
+        rsync
+        strace
+        sysstat
+        tmux
+    )
+
+    # Networking tools
     NETWORKING_TOOLS=(
         apache2-utils
         arping
@@ -53,7 +99,6 @@ RUN --mount=type=cache,target=/var/cache/apt,id=apt-${TARGETARCH} \
         bmon
         bridge-utils
         conntrack
-        curl
         dnsutils
         ethtool
         fping
@@ -85,56 +130,27 @@ RUN --mount=type=cache,target=/var/cache/apt,id=apt-${TARGETARCH} \
         termshark
         traceroute
         tshark
-        wget
         whois
         wireguard-tools
     )
 
-    SYSTEM_TOOLS=(
-        bash
-        btop
-        ca-certificates
-        coreutils
-        dstat
-        file
-        fzf
-        git
-        gnupg
-        htop
-        iotop
-        jq
-        kitty-terminfo
-        lsof
-        magic-wormhole
-        ncdu
-        nfs-common
-        openssl
-        procps
-        python3-pip
-        rsync
-        strace
-        sudo
-        sysstat
-        tmux
-        unzip
-        util-linux
-        vim
-        zip
-        zsh
-    )
-
-    # Install all packages
-    apt-get install -y --no-install-recommends "${NETWORKING_TOOLS[@]}" "${SYSTEM_TOOLS[@]}"
+    # Install in order of stability
+    apt-get install -y --no-install-recommends \
+        "${CORE_TOOLS[@]}" \
+        "${SYSTEM_TOOLS[@]}" \
+        "${NETWORKING_TOOLS[@]}"
 EOT
 
 # Install official Ookla speedtest CLI.
-RUN --mount=type=cache,target=/var/cache/apt,id=apt-${TARGETARCH} \
-    --mount=type=cache,target=/var/lib/apt,id=apt-${TARGETARCH} \
+RUN --mount=type=cache,target=/var/cache/apt,id=apt-${TARGETARCH},sharing=locked \
+    --mount=type=cache,target=/var/lib/apt,id=apt-${TARGETARCH},sharing=locked \
     <<EOT
     set -eux
 
     # Add Ookla repository
-    curl -fsSL https://packagecloud.io/ookla/speedtest-cli/gpgkey | gpg --dearmor -o /etc/apt/keyrings/speedtest.gpg
+    curl -fsSL https://packagecloud.io/ookla/speedtest-cli/gpgkey | \
+        gpg --dearmor -o /etc/apt/keyrings/speedtest.gpg
+    
     echo "deb [signed-by=/etc/apt/keyrings/speedtest.gpg] https://packagecloud.io/ookla/speedtest-cli/debian/ $(. /etc/os-release && echo "$VERSION_CODENAME") main" | \
         tee /etc/apt/sources.list.d/speedtest.list > /dev/null
 
@@ -147,7 +163,8 @@ EOT
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /usr/local/bin/
 
 # Install 'check-tls' using uv for TLS/SSL certificate checking.
-RUN --mount=type=cache,target=/root/.cache uv tool install check-tls
+RUN --mount=type=cache,target=/root/.cache \
+    uv tool install check-tls
 
 # Install grpcurl from GitHub releases.
 RUN --mount=type=cache,target=/tmp/grpcurl <<EOT
@@ -157,11 +174,11 @@ RUN --mount=type=cache,target=/tmp/grpcurl <<EOT
     case "$TARGETARCH" in
         amd64)   ARCH="x86_64" ;;
         arm64)   ARCH="arm64" ;;
-        *)       echo "Unsupported architecture: $TARGETARCH" && exit 1 ;;
+        *)       echo "Unsupported architecture: $TARGETARCH" >&2 && exit 1 ;;
     esac
 
     # Fetch the latest release tag from the GitHub API
-    TAG=$(curl -s https://api.github.com/repos/fullstorydev/grpcurl/releases/latest | jq -r .tag_name)
+    TAG=$(curl -fsSL https://api.github.com/repos/fullstorydev/grpcurl/releases/latest | jq -r .tag_name)
 
     FILE="grpcurl_${TAG#v}_linux_${ARCH}.tar.gz"
     URL="https://github.com/fullstorydev/grpcurl/releases/download/${TAG}/${FILE}"
@@ -188,16 +205,24 @@ RUN --mount=type=cache,target=/root/.cache <<EOT
     set -eux
 
     # Install Oh My Zsh non-interactively
-    curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh | bash -s -- --unattended
+    curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh | \
+        bash -s -- --unattended
 
     # Define the custom plugins and themes directory
     ZSH_CUSTOM=/root/.oh-my-zsh/custom
 
-    # Clone Zsh plugins and Powerlevel10k theme
-    git clone --depth 1 https://github.com/zsh-users/zsh-autosuggestions ${ZSH_CUSTOM}/plugins/zsh-autosuggestions
-    git clone --depth 1 https://github.com/zsh-users/zsh-completions ${ZSH_CUSTOM}/plugins/zsh-completions
-    git clone --depth 1 https://github.com/zdharma-continuum/fast-syntax-highlighting ${ZSH_CUSTOM}/plugins/fast-syntax-highlighting
-    git clone --depth 1 https://github.com/romkatv/powerlevel10k.git ${ZSH_CUSTOM}/themes/powerlevel10k
+    # Clone Zsh plugins and Powerlevel10k theme (depth 1 for speed)
+    git clone --depth 1 https://github.com/zsh-users/zsh-autosuggestions \
+        ${ZSH_CUSTOM}/plugins/zsh-autosuggestions
+    
+    git clone --depth 1 https://github.com/zsh-users/zsh-completions \
+        ${ZSH_CUSTOM}/plugins/zsh-completions
+    
+    git clone --depth 1 https://github.com/zdharma-continuum/fast-syntax-highlighting \
+        ${ZSH_CUSTOM}/plugins/fast-syntax-highlighting
+    
+    git clone --depth 1 https://github.com/romkatv/powerlevel10k.git \
+        ${ZSH_CUSTOM}/themes/powerlevel10k
 
     # Install gitstatus for Powerlevel10k
     case "$TARGETARCH" in
@@ -227,13 +252,17 @@ FROM base AS docker
 
 ARG TARGETARCH
 
-RUN --mount=type=cache,target=/var/cache/apt,id=apt-${TARGETARCH} \
-    --mount=type=cache,target=/var/lib/apt,id=apt-${TARGETARCH} \
+LABEL org.opencontainers.image.title="netshoot-docker"
+LABEL org.opencontainers.image.description="Netshoot with Docker CLI"
+
+RUN --mount=type=cache,target=/var/cache/apt,id=apt-${TARGETARCH},sharing=locked \
+    --mount=type=cache,target=/var/lib/apt,id=apt-${TARGETARCH},sharing=locked \
     <<EOT
     set -eux
 
     # Add Docker's official GPG key
-    curl -fsSL https://download.docker.com/linux/debian/gpg -o /etc/apt/keyrings/docker.asc
+    curl -fsSL https://download.docker.com/linux/debian/gpg \
+        -o /etc/apt/keyrings/docker.asc
     chmod a+r /etc/apt/keyrings/docker.asc
 
     # Add Docker repository to apt sources list
@@ -244,7 +273,12 @@ RUN --mount=type=cache,target=/var/cache/apt,id=apt-${TARGETARCH} \
 
     # Install Docker components
     apt-get update
-    apt-get install -y --no-install-recommends docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+    apt-get install -y --no-install-recommends \
+        docker-ce \
+        docker-ce-cli \
+        containerd.io \
+        docker-buildx-plugin \
+        docker-compose-plugin
 EOT
 
 # ==============================================================================
@@ -252,10 +286,16 @@ EOT
 # ==============================================================================
 FROM base AS podman
 
+ARG TARGETARCH
+
+LABEL org.opencontainers.image.title="netshoot-podman"
+LABEL org.opencontainers.image.description="Netshoot with Podman"
+
 # Install Podman and fuse-overlayfs.
-RUN --mount=type=cache,target=/var/cache/apt,id=apt-${TARGETARCH} \
-    --mount=type=cache,target=/var/lib/apt,id=apt-${TARGETARCH} \
+RUN --mount=type=cache,target=/var/cache/apt,id=apt-${TARGETARCH},sharing=locked \
+    --mount=type=cache,target=/var/lib/apt,id=apt-${TARGETARCH},sharing=locked \
     <<EOT
+    set -eux
     apt-get update
     apt-get install -y --no-install-recommends podman fuse-overlayfs
 EOT
@@ -264,12 +304,14 @@ EOT
 COPY --link configs/podman-storage.conf /root/.config/containers/storage.conf
 
 # ==============================================================================
-# nerdctl Base Stage: Common nerdctl installation logic
+# nerdctl Stage: Installs nerdctl (client only version)
 # ==============================================================================
-FROM base AS nerdctl-base
+FROM base AS nerdctl
 
 ARG TARGETARCH
-ARG NERDCTL_VARIANT=""
+
+LABEL org.opencontainers.image.title="netshoot-nerdctl"
+LABEL org.opencontainers.image.description="Netshoot with nerdctl (client only)"
 
 # Download and install nerdctl.
 # The script verifies the download with a SHA256 checksum.
@@ -281,26 +323,21 @@ RUN --mount=type=cache,target=/tmp/nerdctl <<EOT
         amd64) ARCH=amd64 ;;
         arm64) ARCH=arm64 ;;
         arm)   ARCH=arm-v7 ;;
-        *) echo "Unsupported architecture: $TARGETARCH" && exit 1 ;;
+        *) echo "Unsupported architecture: $TARGETARCH" >&2 && exit 1 ;;
     esac
 
     # Fetch the latest release tag from the GitHub API
-    TAG=$(curl -s https://api.github.com/repos/containerd/nerdctl/releases/latest | jq -r .tag_name)
+    TAG=$(curl -fsSL https://api.github.com/repos/containerd/nerdctl/releases/latest | \
+        jq -r .tag_name)
 
-    # Determine filename based on variant
-    if [ "$NERDCTL_VARIANT" = "full" ]; then
-        FILE="nerdctl-full-${TAG#v}-linux-${ARCH}.tar.gz"
-    else
-        FILE="nerdctl-${TAG#v}-linux-${ARCH}.tar.gz"
-    fi
-
+    FILE="nerdctl-${TAG#v}-linux-${ARCH}.tar.gz"
     URL="https://github.com/containerd/nerdctl/releases/download/${TAG}/${FILE}"
     CHECKSUM_URL="https://github.com/containerd/nerdctl/releases/download/${TAG}/SHA256SUMS"
     ARCHIVE="/tmp/nerdctl/$FILE"
 
     # Download and verify the archive if not cached
     if [ ! -f "$ARCHIVE" ]; then
-        echo "Downloading $URL"
+        echo "Downloading nerdctl ${TAG} from $URL"
         curl -fsSL "$URL" -o "$ARCHIVE"
         curl -fsSL "$CHECKSUM_URL" -o "/tmp/nerdctl/SHA256SUMS"
     fi
@@ -313,22 +350,57 @@ RUN --mount=type=cache,target=/tmp/nerdctl <<EOT
     cd /tmp/nerdctl && grep "$FILE" SHA256SUMS | sha256sum -c -
 
     # Extract the archive
-    tar Cxzvvf /usr/local "$ARCHIVE"
+    tar Cxzvf /usr/local "$ARCHIVE"
 EOT
-
-# ==============================================================================
-# nerdctl Stage: Installs nerdctl (client only version)
-# ==============================================================================
-FROM nerdctl-base AS nerdctl
-
-ARG NERDCTL_VARIANT=""
 
 # ==============================================================================
 # Containerd/nerdctl Stage: Installs nerdctl (full version with containerd)
 # ==============================================================================
-FROM nerdctl-base AS containerd
+FROM base AS containerd
 
-ARG NERDCTL_VARIANT="full"
+ARG TARGETARCH
+
+LABEL org.opencontainers.image.title="netshoot-containerd"
+LABEL org.opencontainers.image.description="Netshoot with nerdctl full (containerd included)"
+
+# Download and install nerdctl full.
+RUN --mount=type=cache,target=/tmp/nerdctl <<EOT
+    set -eux
+
+    # Detect architecture for GitHub release URL
+    case "$TARGETARCH" in
+        amd64) ARCH=amd64 ;;
+        arm64) ARCH=arm64 ;;
+        arm)   ARCH=arm-v7 ;;
+        *) echo "Unsupported architecture: $TARGETARCH" >&2 && exit 1 ;;
+    esac
+
+    # Fetch the latest release tag from the GitHub API
+    TAG=$(curl -fsSL https://api.github.com/repos/containerd/nerdctl/releases/latest | \
+        jq -r .tag_name)
+
+    FILE="nerdctl-full-${TAG#v}-linux-${ARCH}.tar.gz"
+    URL="https://github.com/containerd/nerdctl/releases/download/${TAG}/${FILE}"
+    CHECKSUM_URL="https://github.com/containerd/nerdctl/releases/download/${TAG}/SHA256SUMS"
+    ARCHIVE="/tmp/nerdctl/$FILE"
+
+    # Download and verify the archive if not cached
+    if [ ! -f "$ARCHIVE" ]; then
+        echo "Downloading nerdctl-full ${TAG} from $URL"
+        curl -fsSL "$URL" -o "$ARCHIVE"
+        curl -fsSL "$CHECKSUM_URL" -o "/tmp/nerdctl/SHA256SUMS"
+    fi
+
+    # Verify checksum - ensure the file exists in SHA256SUMS
+    if ! grep -q "$FILE" /tmp/nerdctl/SHA256SUMS; then
+        echo "ERROR: Checksum for $FILE not found in SHA256SUMS" >&2
+        exit 1
+    fi
+    cd /tmp/nerdctl && grep "$FILE" SHA256SUMS | sha256sum -c -
+
+    # Extract the archive
+    tar Cxzvf /usr/local "$ARCHIVE"
+EOT
 
 # Copy the entrypoint script for containerd.
 COPY --link --chmod=755 entrypoint-containerd.sh /entrypoint.sh
