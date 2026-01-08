@@ -69,11 +69,26 @@ export OLLAMA_NOHISTORY=true
 # Configure Shell GPT.
 export OPENAI_BASE_URL=https://api.openai.com/v1
 
-# Configure Secretive for SSH agent.
-export SSH_AUTH_SOCK=/Users/obeone/Library/Containers/com.maxgoedjen.Secretive.SecretAgent/Data/socket.ssh
+# Configure Secretive for the SSH agent (macOS).
+#
+# NOTE:
+# - This is machine-specific.
+# - Prefer setting SSH_AUTH_SOCK in ~/.zshrc.local or via your login/session manager.
+# - We only set it if SSH_AUTH_SOCK isn't already defined.
+if [[ -z "${SSH_AUTH_SOCK:-}" ]]; then
+    _secretive_sock="$HOME/Library/Containers/com.maxgoedjen.Secretive.SecretAgent/Data/socket.ssh"
+    if [[ -S "$_secretive_sock" ]]; then
+        export SSH_AUTH_SOCK="$_secretive_sock"
+    fi
+    unset _secretive_sock
+fi
 
-# Configure Lando path.
-export PATH="/Users/obeone/.lando/bin${PATH+:$PATH}"
+# Configure Lando PATH.
+#
+# NOTE: This is user/machine-specific and should remain portable (avoid hard-coded usernames).
+if [[ -d "$HOME/.lando/bin" ]]; then
+    export PATH="$HOME/.lando/bin${PATH+:$PATH}"
+fi
 
 # ==============================================================================
 # Oh My Zsh Configuration
@@ -100,9 +115,14 @@ ENABLE_CORRECTION="false"
 HIST_STAMPS="dd/mm/yyyy"
 
 # Configure web search engines for the `web-search` plugin.
-ZSH_WEB_SEARCH_ENGINES=(
-    searng 'https://searxng.containers.obeone.org/search?q='
-)
+#
+# NOTE: Custom/internal URLs can be sensitive metadata in public repos.
+# Override this array in ~/.zshrc.local if you want a private/self-hosted endpoint.
+if [[ -z "${ZSH_WEB_SEARCH_ENGINES+x}" ]]; then
+    ZSH_WEB_SEARCH_ENGINES=(
+        ddg 'https://duckduckgo.com/?q='
+    )
+fi
 
 # Define the list of Oh My Zsh plugins to load.
 plugins=(
