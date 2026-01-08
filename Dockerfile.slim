@@ -1,12 +1,13 @@
 # syntax=docker/dockerfile:1
 #
-# Netshoot-slim: A minimal Docker image for network troubleshooting.
+# Netshoot Slim: A slimmed-down Docker image for network troubleshooting and analysis.
 #
+# This Dockerfile builds a customized Debian Trixie image with a focused set of
+# networking and system tools, and an enhanced Zsh shell environment with Oh My Zsh.
+#
+FROM debian:trixie AS base
 
-# ==============================================================================
-# Base Stage: Debian Bookworm Slim with a minimal toolset
-# ==============================================================================
-FROM debian:bookworm-slim
+ARG TARGETARCH
 
 # Set environment variables for terminal, locale, and non-interactive apt.
 ENV TERM=xterm-kitty \
@@ -15,26 +16,121 @@ ENV TERM=xterm-kitty \
 
 # Configure apt to keep downloaded packages in the cache.
 # This leverages BuildKit caching to speed up subsequent builds.
-RUN rm -f /etc/apt/apt.conf.d/docker-clean && \
+RUN <<EOT
+    rm -f /etc/apt/apt.conf.d/docker-clean
     echo 'Binary::apt::APT::Keep-Downloaded-Packages "true";' > /etc/apt/apt.conf.d/keep-cache
+EOT
 
-# Install a minimal set of essential utilities for networking.
-# The --no-install-recommends flag avoids installing unnecessary packages.
-# After installation, the apt cache is cleaned to keep the image size small.
+# Upgrade all packages to their latest versions.
+# Uses BuildKit cache mounts to accelerate the process.
 RUN --mount=type=cache,target=/var/cache/apt,id=apt-${TARGETARCH} \
     --mount=type=cache,target=/var/lib/apt,id=apt-${TARGETARCH} \
-    apt-get update && \
-    apt-get full-upgrade -y && \
-    apt-get install -y --no-install-recommends \
-    # Core networking tools
-    iproute2 \
-    iputils-ping \
-    traceroute \
-    dnsutils \
-    curl \
-    wget \
-    netcat-openbsd \
-    tcpdump
+    <<EOT
+    apt-get update
+    apt-get full-upgrade -y
+EOT
 
-# Set the default command to an interactive bash shell.
-CMD ["/bin/bash"]
+# Install a focused set of essential utilities for networking and system administration.
+# Uses BuildKit cache mounts for faster installation.
+RUN --mount=type=cache,target=/var/cache/apt,id=apt-${TARGETARCH} \
+    --mount=type=cache,target=/var/lib/apt,id=apt-${TARGETARCH} \
+    bash <<'EOT'
+    set -eux
+
+    # Define slimmed-down package lists
+    NETWORKING_TOOLS_SLIM=(
+        apache2-utils
+        bind9-utils
+        curl
+        ethtool
+        fping
+        httpie
+        iperf3
+        iproute2
+        iputils-ping
+        mtr
+        net-tools
+        netcat-openbsd
+        nmap
+        openssh-client
+        socat
+        tcpdump
+        telnet
+        traceroute
+        wget
+        whois
+    )
+
+    SYSTEM_TOOLS_SLIM=(
+        bash
+        btop
+        ca-certificates
+        coreutils
+        file
+        git
+        jq
+        kitty-terminfo
+        lsof
+        procps
+        rsync
+        strace
+        tmux
+        unzip
+        util-linux
+        vim
+        zip
+        zsh
+    )
+
+    # Install all selected packages
+    apt-get install -y --no-install-recommends "${NETWORKING_TOOLS_SLIM[@]}" "${SYSTEM_TOOLS_SLIM[@]}"
+
+    # Clean up apt cache to reduce image size
+    apt-get clean
+    rm -rf /var/lib/apt/lists/*
+EOT
+
+# Install 'uv', a fast Python package installer from Astral.
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /usr/local/bin/
+
+# Install 'check-tls' using uv for TLS/SSL certificate checking.
+RUN --mount=type=cache,target=/root/.cache uv tool install check-tls
+
+# Install Oh My Zsh, essential plugins, and the Powerlevel10k theme.
+# This enhances the shell with auto-suggestions, syntax highlighting, and more.
+# A cache mount is used to speed up git clone operations during repeated builds.
+RUN --mount=type=cache,target=/root/.cache <<EOT
+    set -eux
+
+    # Install Oh My Zsh non-interactively
+    curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh | bash -s -- --unattended
+
+    # Define the custom plugins and themes directory
+    ZSH_CUSTOM=/root/.oh-my-zsh/custom
+
+    # Clone Zsh plugins and Powerlevel10k theme
+    git clone --depth 1 https://github.com/zsh-users/zsh-autosuggestions ${ZSH_CUSTOM}/plugins/zsh-autosuggestions
+    git clone --depth 1 https://github.com/zsh-users/zsh-completions ${ZSH_CUSTOM}/plugins/zsh-completions
+    git clone --depth 1 https://github.com/zdharma-continuum/fast-syntax-highlighting ${ZSH_CUSTOM}/plugins/fast-syntax-highlighting
+    git clone --depth 1 https://github.com/romkatv/powerlevel10k.git ${ZSH_CUSTOM}/themes/powerlevel10k
+
+    # Install gitstatus for Powerlevel10k
+    case "$TARGETARCH" in
+        amd64)   PLATFORM="x86_64" ;;
+        386)     PLATFORM="i686" ;;
+        arm64)   PLATFORM="aarch64" ;;
+        arm)     PLATFORM="arm" ;;
+        ppc64le) PLATFORM="ppc64le" ;;
+        *)       PLATFORM="$TARGETARCH" ;;
+    esac
+    ${ZSH_CUSTOM}/themes/powerlevel10k/gitstatus/install -s linux -m ${PLATFORM}
+EOT
+
+# Copy configuration files and scripts using --link for better layer reuse.
+COPY --link configs/zshrc /root/.zshrc
+COPY --link configs/p10k.zsh /root/.p10k.zsh
+COPY --link --chmod=755 tools/transfer.sh /usr/local/bin/transfer.sh
+
+# Set the working directory and default command.
+WORKDIR /root
+CMD [ "bash", "-c", "zsh; exit 0" ]
