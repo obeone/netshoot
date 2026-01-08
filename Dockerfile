@@ -46,7 +46,7 @@ RUN --mount=type=cache,target=/var/cache/apt,id=apt-${TARGETARCH} \
     NETWORKING_TOOLS=(
         apache2-utils
         bind9-utils
-        bird
+        bird2 
         bridge-utils
         conntrack
         curl
@@ -109,7 +109,6 @@ RUN --mount=type=cache,target=/var/cache/apt,id=apt-${TARGETARCH} \
         openssl
         procps
         python3-pip
-        python3-setuptools
         rsync
         screen
         strace
@@ -177,6 +176,8 @@ CMD [ "bash", "-c", "zsh; exit 0" ]
 # ==============================================================================
 FROM base AS docker
 
+ARG TARGETARCH
+
 RUN --mount=type=cache,target=/var/cache/apt,id=apt-${TARGETARCH} \
     --mount=type=cache,target=/var/lib/apt,id=apt-${TARGETARCH} \
     <<EOT
@@ -208,20 +209,20 @@ RUN --mount=type=cache,target=/var/cache/apt,id=apt-${TARGETARCH} \
     <<EOT
     apt-get update
     apt-get install -y --no-install-recommends podman fuse-overlayfs
-    apt-get clean
 EOT
 
 # Copy Podman storage configuration file.
 COPY --link configs/podman-storage.conf /root/.config/containers/storage.conf
 
 # ==============================================================================
-# nerdctl Stage: Installs nerdctl (client only version)
+# nerdctl Base Stage: Common nerdctl installation logic
 # ==============================================================================
-FROM base AS nerdctl
+FROM base AS nerdctl-base
 
 ARG TARGETARCH
+ARG NERDCTL_VARIANT=""
 
-# Download and install the latest version of nerdctl (client only).
+# Download and install nerdctl.
 # The script verifies the download with a SHA256 checksum.
 RUN --mount=type=cache,target=/tmp/nerdctl <<EOT
     set -eux
@@ -236,7 +237,14 @@ RUN --mount=type=cache,target=/tmp/nerdctl <<EOT
 
     # Fetch the latest release tag from the GitHub API
     TAG=$(curl -s https://api.github.com/repos/containerd/nerdctl/releases/latest | jq -r .tag_name)
-    FILE="nerdctl-${TAG#v}-linux-${ARCH}.tar.gz"
+
+    # Determine filename based on variant
+    if [ "$NERDCTL_VARIANT" = "full" ]; then
+        FILE="nerdctl-full-${TAG#v}-linux-${ARCH}.tar.gz"
+    else
+        FILE="nerdctl-${TAG#v}-linux-${ARCH}.tar.gz"
+    fi
+
     URL="https://github.com/containerd/nerdctl/releases/download/${TAG}/${FILE}"
     CHECKSUM_URL="https://github.com/containerd/nerdctl/releases/download/${TAG}/SHA256SUMS"
     ARCHIVE="/tmp/nerdctl/$FILE"
@@ -248,54 +256,30 @@ RUN --mount=type=cache,target=/tmp/nerdctl <<EOT
         curl -fsSL "$CHECKSUM_URL" -o "/tmp/nerdctl/SHA256SUMS"
     fi
 
-    # Verify checksum
+    # Verify checksum - ensure the file exists in SHA256SUMS
+    if ! grep -q "$FILE" /tmp/nerdctl/SHA256SUMS; then
+        echo "ERROR: Checksum for $FILE not found in SHA256SUMS" >&2
+        exit 1
+    fi
     cd /tmp/nerdctl && grep "$FILE" SHA256SUMS | sha256sum -c -
 
     # Extract the archive
     tar Cxzvvf /usr/local "$ARCHIVE"
 EOT
 
+# ==============================================================================
+# nerdctl Stage: Installs nerdctl (client only version)
+# ==============================================================================
+FROM nerdctl-base AS nerdctl
+
+ARG NERDCTL_VARIANT=""
 
 # ==============================================================================
 # Containerd/nerdctl Stage: Installs nerdctl (full version with containerd)
 # ==============================================================================
-FROM base AS containerd
+FROM nerdctl-base AS containerd
 
-ARG TARGETARCH
-
-# Download and install the latest full version of nerdctl, which includes containerd.
-# The script verifies the download with a SHA256 checksum.
-RUN --mount=type=cache,target=/tmp/nerdctl <<EOT
-    set -eux
-
-    # Detect architecture for GitHub release URL
-    case "$TARGETARCH" in
-        amd64) ARCH=amd64 ;;
-        arm64) ARCH=arm64 ;;
-        arm)   ARCH=arm-v7 ;;
-        *) echo "Unsupported architecture: $TARGETARCH" && exit 1 ;;
-    esac
-
-    # Fetch the latest release tag from the GitHub API
-    TAG=$(curl -s https://api.github.com/repos/containerd/nerdctl/releases/latest | jq -r .tag_name)
-    FILE="nerdctl-full-${TAG#v}-linux-${ARCH}.tar.gz"
-    URL="https://github.com/containerd/nerdctl/releases/download/${TAG}/${FILE}"
-    CHECKSUM_URL="https://github.com/containerd/nerdctl/releases/download/${TAG}/SHA256SUMS"
-    ARCHIVE="/tmp/nerdctl/$FILE"
-
-    # Download and verify the archive if not cached
-    if [ ! -f "$ARCHIVE" ]; then
-        echo "Downloading $URL"
-        curl -fsSL "$URL" -o "$ARCHIVE"
-        curl -fsSL "$CHECKSUM_URL" -o "/tmp/nerdctl/SHA256SUMS"
-    fi
-
-    # Verify checksum
-    cd /tmp/nerdctl && grep "$FILE" SHA256SUMS | sha256sum -c -
-
-    # Extract the archive
-    tar Cxzvvf /usr/local "$ARCHIVE"
-EOT
+ARG NERDCTL_VARIANT="full"
 
 # Copy the entrypoint script for containerd.
 COPY --link --chmod=755 entrypoint-containerd.sh /entrypoint.sh

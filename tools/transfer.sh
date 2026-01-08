@@ -211,11 +211,11 @@ decrypt_file() {
 
 # send_file_or_directory <arguments...>
 #
-# Handles the logic for uploading files and directories.
+# Handles @the logic for uploading files and directories.
 #
 send_file_or_directory() {
-    local max_downloads="$TRANSFERSH_MAX_DAYS"
-    local max_days="$TRANSFERSH_MAX_DOWNLOADS"
+    local max_downloads="$TRANSFERSH_MAX_DOWNLOADS"
+    local max_days="$TRANSFERSH_MAX_DAYS"
     local encryption_key="$TRANSFERSH_ENCRYPTION_KEY"
     local request_confirmation=true
     local auth_provided=false

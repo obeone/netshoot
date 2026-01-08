@@ -4,7 +4,7 @@
 [![GitHub Stars](https://img.shields.io/github/stars/obeone/netshoot?style=for-the-badge&logo=github)](https://github.com/obeone/netshoot)
 [![GitHub License](https://img.shields.io/github/license/obeone/netshoot?style=for-the-badge)](https://github.com/obeone/netshoot/blob/main/LICENSE)
 
-**Netshoot** is a powerful, multi-tool Docker image designed for comprehensive network troubleshooting and analysis. Built on the latest **Debian Bookworm** release, it bundles a vast collection of essential networking utilities, system tools, and multiple container runtimes into a single, convenient package.
+**Netshoot** is a powerful, multi-tool Docker image designed for comprehensive network troubleshooting and analysis. Built on **Debian 13 Trixie** (stable), it bundles a vast collection of essential networking utilities, system tools, and multiple container runtimes into a single, convenient package.
 
 Whether you're debugging a complex Kubernetes networking issue, analyzing traffic, or simply need a versatile toolkit, `netshoot` provides a ready-to-use, enhanced shell environment to get the job done efficiently.
 
@@ -16,7 +16,7 @@ Whether you're debugging a complex Kubernetes networking issue, analyzing traffi
 - **🔧 Enhanced Shell Experience**: Features **Zsh** with **Oh My Zsh**, **Powerlevel10k** theme, and plugins for auto-suggestions and syntax highlighting.
 - **⚙️ Multiple Variants**: Provides specialized images with different container runtimes (**Docker**, **Podman**, **nerdctl**) to fit your needs.
 - **🐍 Python Ready**: Equipped with `python3`, `pipx`, and `uv` for fast Python package management.
-- **🌐 Based on Debian Bookworm**: A stable, modern, and secure foundation.
+- **🌐 Based on Debian 13 Trixie**: A stable, modern, and secure foundation.
 - **📁 Easy File Transfers**: Includes a handy `transfer.sh` script for quick file sharing.
 
 ---
