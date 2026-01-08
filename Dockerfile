@@ -99,6 +99,7 @@ RUN --mount=type=cache,target=/var/cache/apt,id=apt-${TARGETARCH} \
         file
         fzf
         git
+        gnupg
         htop
         iotop
         jq
