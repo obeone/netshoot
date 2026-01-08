@@ -4,29 +4,35 @@
 [![GitHub Stars](https://img.shields.io/github/stars/obeone/netshoot?style=for-the-badge&logo=github)](https://github.com/obeone/netshoot)
 [![GitHub License](https://img.shields.io/github/license/obeone/netshoot?style=for-the-badge)](https://github.com/obeone/netshoot/blob/main/LICENSE)
 
-**Netshoot** is a comprehensive Docker image packed with 60+ networking and system tools for troubleshooting, analysis, and debugging. Built on **Debian 13 Trixie** with an enhanced Zsh shell, it's your go-to toolkit for network diagnostics in containerized environments.
+**Netshoot** is a comprehensive Docker image packed with 70+ networking and
+system tools for troubleshooting, analysis, and debugging. Built on
+**Debian 13 Trixie** with an enhanced Zsh shell, it's your go-to toolkit for
+network diagnostics in containerized environments.
 
 ## 📋 Table of Contents
 
-- [Why Netshoot?](#-why-netshoot)
-- [Quick Start](#-quick-start)
-- [Common Use Cases](#-common-use-cases)
-- [Image Variants](#-image-variants)
-- [Included Tools](#-included-tools)
-- [Advanced Usage](#-advanced-usage)
-- [Building from Source](#-building-from-source)
-- [Contributing](#-contributing)
+- [Why Netshoot?](#why-netshoot)
+- [Quick Start](#quick-start)
+- [Common Use Cases](#common-use-cases)
+- [Image Variants](#image-variants)
+- [Included Tools](#included-tools)
+- [Advanced Usage](#advanced-usage)
+- [Building from Source](#building-from-source)
+- [Contributing](#contributing)
 
-## 🎯 Why Netshoot?
+## Why Netshoot?
 
-- **🔧 Everything You Need**: 60+ pre-installed tools covering networking, system diagnostics, and container management
-- **⚡ Enhanced Shell**: Zsh with Oh My Zsh, Powerlevel10k theme, auto-suggestions, and syntax highlighting
-- **🔀 Multiple Variants**: Choose from base, Docker, Podman, nerdctl, or containerd variants
+- **🔧 Everything You Need**: 70+ pre-installed tools covering networking,
+  system diagnostics, and container management
+- **⚡ Enhanced Shell**: Zsh with Oh My Zsh, Powerlevel10k theme,
+  auto-suggestions, and syntax highlighting
+- **🔀 Multiple Variants**: Choose from base, Docker, Podman, nerdctl, or
+  containerd variants
 - **🐍 Python Ready**: Includes Python 3, pipx, and uv for scripting and automation
 - **📦 Multi-Platform**: Supports both AMD64 and ARM64 architectures
 - **🔒 Secure Base**: Built on Debian 13 Trixie stable with regular updates
 
-## ⚡ Quick Start
+## Quick Start
 
 Pull and run the base image:
 
@@ -51,7 +57,7 @@ docker inspect -f '{{.State.Pid}}' <container-name>
 docker run -it --rm --network=container:<container-name> obeoneorg/netshoot
 ```
 
-## 💡 Common Use Cases
+## Common Use Cases
 
 ### Kubernetes Pod Debugging
 
@@ -104,7 +110,7 @@ docker run -it --rm obeoneorg/netshoot dig +trace example.com
 docker run -it --rm obeoneorg/netshoot dig @8.8.8.8 example.com
 ```
 
-## 🏷️ Image Variants
+## Image Variants
 
 Choose the variant that matches your container runtime needs:
 
@@ -130,19 +136,22 @@ docker pull obeoneorg/netshoot:docker
 docker pull obeoneorg/netshoot:slim
 ```
 
-## 🛠️ Included Tools
+## Included Tools
 
-Netshoot includes 60+ carefully selected tools organized by category:
+Netshoot includes 70+ carefully selected tools organized by category:
 
 ### 🌐 Network Analysis & Diagnostics
 
 **Protocol Analysis**: tcpdump, tshark, termshark, ngrep
-**Traffic Testing**: iperf, iperf3, mtr, fping
+**Traffic Testing**: iperf, iperf3, netperf, mtr, fping
+**Bandwidth Monitoring**: bmon, nload, iftop
 **DNS Tools**: dig, host, nslookup (bind9-utils), dnsutils
-**Network Scanning**: nmap, netcat-openbsd
-**Routing & Firewalls**: bird2, iptables, nftables, ipset, ipvsadm
-**Interface Management**: iproute2 (ip, ss), net-tools (ifconfig, netstat), ethtool, bridge-utils
-**Connection Tracking**: conntrack, iftop
+**Network Scanning**: nmap, masscan, arp-scan, netcat-openbsd
+**Packet Crafting**: hping3, arping
+**Routing & Firewalls**: iptables, nftables, ipset, ipvsadm
+**Interface Management**: iproute2 (ip, ss), net-tools (ifconfig, netstat),
+ethtool, bridge-utils
+**Connection Tracking**: conntrack
 
 ### 🔧 Network Utilities
 
@@ -151,20 +160,22 @@ Netshoot includes 60+ carefully selected tools organized by category:
 **Data Transfer**: socat, rsync, magic-wormhole
 **VPN**: wireguard-tools
 **SMTP Testing**: swaks
-**Other**: traceroute, tcptraceroute, whois, speedtest-cli, dhcping
+**Performance Testing**: speedtest (Ookla official CLI)
+**Other**: traceroute, tcptraceroute, whois
 
 ### 💻 System & Monitoring Tools
 
-**Process Monitoring**: htop, btop, nmon, top (procps)
-**Resource Analysis**: iotop, sysstat (sar, iostat), strace
-**Disk Tools**: ncdu, lsof, e2fsprogs, gdisk
+**Process Monitoring**: htop, btop, top (procps)
+**Resource Analysis**: iotop, dstat, sysstat (sar, iostat), strace
+**Disk Tools**: ncdu, lsof
 **File Operations**: rsync, unzip, zip, file
-**Text Processing**: jq, vim, lynx
+**Text Processing**: jq, vim
 
 ### 🐍 Development & Scripting
 
 **Python**: python3, pip, pipx, uv (fast package manager)
 **Version Control**: git
+**API Testing**: grpcurl (gRPC)
 **Utilities**: fzf (fuzzy finder), coreutils, util-linux
 
 ### 🎨 Enhanced Shell Experience
@@ -172,26 +183,36 @@ Netshoot includes 60+ carefully selected tools organized by category:
 **Zsh Framework**: oh-my-zsh with custom configuration
 **Theme**: powerlevel10k (modern, informative prompt)
 **Plugins**: zsh-autosuggestions, zsh-completions, fast-syntax-highlighting
-**Multiplexers**: tmux, screen
+**Multiplexer**: tmux
 
 ### 🔐 Security & Authentication
 
-**TLS/SSL**: openssl, ca-certificates
-**Access Control**: sudo, fail2ban
+**TLS/SSL**: openssl, ca-certificates, check-tls
+**Access Control**: sudo
 **Storage**: NFS support (nfs-common)
 
 <details>
 <summary>📦 View complete package list</summary>
 
-**Networking**: apache2-utils, bind9-utils, bird2, bridge-utils, conntrack, curl, dhcping, dnsutils, ethtool, fping, httpie, iftop, iperf, iperf3, iproute2, ipset, iptables, iputils-ping, ipvsadm, mtr, netcat-openbsd, net-tools, nftables, ngrep, nmap, openssh-client, socat, speedtest-cli, swaks, tcpdump, tcptraceroute, telnet, termshark, tshark, traceroute, wget, whois, wireguard-tools
+**Networking**: apache2-utils, arping, arp-scan, bind9-utils, bmon,
+bridge-utils, conntrack, curl, dnsutils, ethtool, fping, hping3,
+httpie, iftop, iperf, iperf3, iproute2, ipset, iptables, iputils-ping,
+ipvsadm, masscan, mtr, netcat-openbsd, net-tools, netperf, nftables,
+ngrep, nload, nmap, openssh-client, socat, speedtest, swaks, tcpdump,
+tcptraceroute, telnet, termshark, tshark, traceroute, wget, whois,
+wireguard-tools
 
-**System**: bash, btop, ca-certificates, coreutils, e2fsprogs, fail2ban, file, fzf, gdisk, git, htop, iotop, jq, kitty-terminfo, logrotate, lsof, lynx, magic-wormhole, ncdu, nfs-common, nmon, openssl, pipx, procps, python3-pip, rsync, screen, strace, sudo, sysstat, tmux, unzip, util-linux, uv, vim, zip
+**System**: bash, btop, ca-certificates, check-tls, coreutils, dstat, file,
+fzf, git, grpcurl, htop, iotop, jq, kitty-terminfo, lsof,
+magic-wormhole, ncdu, nfs-common, openssl, pipx, procps, python3-pip,
+rsync, strace, sudo, sysstat, tmux, unzip, util-linux, uv, vim, zip,
+zsh
 
 **Shell**: oh-my-zsh, powerlevel10k, zsh-autosuggestions, zsh-completions, fast-syntax-highlighting
 
 </details>
 
-## 🎨 Advanced Usage
+## Advanced Usage
 
 ### Custom Shell Configuration
 
@@ -274,7 +295,7 @@ docker run -it --rm \
   obeoneorg/netshoot
 ```
 
-## 🏗️ Building from Source
+## Building from Source
 
 ### Quick Build
 
@@ -314,7 +335,7 @@ Use the provided build script for official multi-platform builds:
 
 See [CLAUDE.md](CLAUDE.md) for detailed build system documentation.
 
-## 🤝 Contributing
+## Contributing
 
 Contributions are welcome! Here's how you can help:
 
@@ -327,7 +348,8 @@ Check out [CLAUDE.md](CLAUDE.md) for development guidelines and architecture det
 
 ## 📜 License
 
-This project is licensed under the **MIT License**. See the [LICENSE](LICENSE) file for details.
+This project is licensed under the **MIT License**. See the [LICENSE](LICENSE)
+file for details.
 
 ## 🙏 Credits
 
@@ -341,7 +363,9 @@ Special thanks to:
 
 ## 📚 Related Projects
 
-- [nicolaka/netshoot](https://github.com/nicolaka/netshoot) - Original inspiration (Alpine-based)
+- [nicolaka/netshoot](https://github.com/nicolaka/netshoot) - Original
+  inspiration (Alpine-based)
 - [docker/cli](https://github.com/docker/cli) - Docker CLI
 - [containers/podman](https://github.com/containers/podman) - Podman container engine
-- [containerd/nerdctl](https://github.com/containerd/nerdctl) - Docker-compatible CLI for containerd
+- [containerd/nerdctl](https://github.com/containerd/nerdctl) -
+  Docker-compatible CLI for containerd
