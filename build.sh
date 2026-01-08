@@ -92,14 +92,15 @@ BASE_ARGS=(
     --push
 )
 
-# Add cache arguments if enabled.
+# Cache configuration note.
+#
+# The cache is set per-build inside build_target() so that each build tag uses its
+# own cache reference (e.g. $CACHE_IMAGE:<build-tag>). This avoids cache clashes
+# between different tags/types/targets.
 if [[ "$USE_CACHE" == "true" ]]; then
-    echo "INFO: Docker build cache is ENABLED."
-    BASE_ARGS+=(--cache-from "type=registry,ref=$CACHE_IMAGE")
-    BASE_ARGS+=(--cache-to "type=registry,ref=$CACHE_IMAGE,mode=max")
+    echo "INFO: Docker build cache is ENABLED (tagged per build)."
 else
     echo "INFO: Docker build cache is DISABLED."
-    BASE_ARGS+=(--no-cache)
 fi
 
 # Add build context.
@@ -136,17 +137,37 @@ build_target() {
     IFS=':' read -r target tags <<< "$entry"
     IFS=',' read -ra tags_arr <<< "$tags"
 
+    # Use the first tag as the build identifier for cache.
+    # Example: for "base:debian-latest,debian,latest" -> cache ref is "$CACHE_IMAGE:debian-latest".
+    local build_tag="${tags_arr[0]}"
+    if [[ -z "$build_tag" ]]; then
+        echo "ERROR: Unable to determine build tag for cache (empty tag list)."
+        exit 1
+    fi
+
     local tag_args=()
     for tag in "${tags_arr[@]}"; do
         tag_args+=(-t "${IMAGE_NAME}:$tag")
     done
 
+    local cache_args=()
+    if [[ "$USE_CACHE" == "true" ]]; then
+        cache_args+=(--cache-from "type=registry,ref=${CACHE_IMAGE}:${build_tag}")
+        cache_args+=(--cache-to "type=registry,ref=${CACHE_IMAGE}:${build_tag},mode=max")
+    else
+        cache_args+=(--no-cache)
+    fi
+
     echo "--------------------------------------------------"
     echo "Building target: $target with tags: ${tags_arr[*]} from $dockerfile"
+    if [[ "$USE_CACHE" == "true" ]]; then
+        echo "Using cache ref: ${CACHE_IMAGE}:${build_tag}"
+    fi
     echo "--------------------------------------------------"
 
     docker buildx build \
         "${BASE_ARGS[@]}" \
+        "${cache_args[@]}" \
         --file "$dockerfile" \
         "${tag_args[@]}" \
         --target "$target"
