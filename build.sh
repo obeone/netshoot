@@ -99,6 +99,7 @@ if [[ "$USE_CACHE" == "true" ]]; then
     BASE_ARGS+=(--cache-to "type=registry,ref=$CACHE_IMAGE,mode=max")
 else
     echo "INFO: Docker build cache is DISABLED."
+    BASE_ARGS+=(--no-cache)
 fi
 
 # Add build context.
