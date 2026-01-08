@@ -47,15 +47,17 @@ RUN --mount=type=cache,target=/var/cache/apt,id=apt-${TARGETARCH} \
     # Define package lists
     NETWORKING_TOOLS=(
         apache2-utils
+        arping
+        arp-scan
         bind9-utils
-        bird2
+        bmon
         bridge-utils
         conntrack
         curl
-        dhcping
         dnsutils
         ethtool
         fping
+        hping3
         httpie
         iftop
         iperf
@@ -65,15 +67,17 @@ RUN --mount=type=cache,target=/var/cache/apt,id=apt-${TARGETARCH} \
         iptables
         iputils-ping
         ipvsadm
+        masscan
         mtr
         net-tools
         netcat-openbsd
+        netperf
         nftables
         ngrep
+        nload
         nmap
         openssh-client
         socat
-        speedtest-cli
         swaks
         tcpdump
         tcptraceroute
@@ -91,28 +95,23 @@ RUN --mount=type=cache,target=/var/cache/apt,id=apt-${TARGETARCH} \
         btop
         ca-certificates
         coreutils
-        e2fsprogs
-        fail2ban
+        dstat
         file
         fzf
-        gdisk
         git
+        grpcurl
         htop
         iotop
         jq
         kitty-terminfo
-        logrotate
         lsof
-        lynx
         magic-wormhole
         ncdu
         nfs-common
-        nmon
         openssl
         procps
         python3-pip
         rsync
-        screen
         strace
         sudo
         sysstat
@@ -126,6 +125,22 @@ RUN --mount=type=cache,target=/var/cache/apt,id=apt-${TARGETARCH} \
 
     # Install all packages
     apt-get install -y --no-install-recommends "${NETWORKING_TOOLS[@]}" "${SYSTEM_TOOLS[@]}"
+EOT
+
+# Install official Ookla speedtest CLI.
+RUN --mount=type=cache,target=/var/cache/apt,id=apt-${TARGETARCH} \
+    --mount=type=cache,target=/var/lib/apt,id=apt-${TARGETARCH} \
+    <<EOT
+    set -eux
+
+    # Add Ookla repository
+    curl -fsSL https://packagecloud.io/ookla/speedtest-cli/gpgkey | gpg --dearmor -o /etc/apt/keyrings/speedtest.gpg
+    echo "deb [signed-by=/etc/apt/keyrings/speedtest.gpg] https://packagecloud.io/ookla/speedtest-cli/debian/ $(. /etc/os-release && echo "$VERSION_CODENAME") main" | \
+        tee /etc/apt/sources.list.d/speedtest.list > /dev/null
+
+    # Install speedtest
+    apt-get update
+    apt-get install -y --no-install-recommends speedtest
 EOT
 
 # Install 'uv', a fast Python package installer from Astral.
