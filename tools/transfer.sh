@@ -5,9 +5,9 @@
 # Script Name:   transfer.sh
 # Description:   A command-line tool to interact with the Transfer.sh service
 #                for sending, receiving, deleting, and inspecting files.
-# Author:        obeone (assisted by GPT-3.5 and GPT-4)
-# Version:       1.2
-# Date:          2024-02-15
+# Author:        Grégoire Compagnon (obeone)
+# Version:       1.2.1
+# Date:          2026-01-08
 # License:       MIT License
 #
 # Usage:
@@ -53,11 +53,15 @@ BOLD='\e[1m'
 # Logging
 # ==============================================================================
 
-# log <level> <message>
+# log
 #
 # Prints a log message with a specified level (ERROR, WARN, INFO, DEBUG).
 # The message is only displayed if its level is at or below the global
 # LOG_LEVEL.
+#
+# Arguments:
+#   $1 - Log level (ERROR, WARN, INFO, DEBUG).
+#   $* - The log message.
 #
 log() {
     local level="$1"
@@ -79,8 +83,8 @@ log() {
     if [[ $level_idx -le $current_level_idx ]]; then
         case "$level" in
             DEBUG) echo -e "${YELLOW}[DEBUG] ${message}${RESET}" >&2 ;;
-            INFO)  echo -e "${GREEN}[INFO] ${message}${RESET}" >&2 ;;
-            WARN)  echo -e "${YELLOW}[WARN] ${message}${RESET}" >&2 ;;
+            INFO) echo -e "${GREEN}[INFO] ${message}${RESET}" >&2 ;;
+            WARN) echo -e "${YELLOW}[WARN] ${message}${RESET}" >&2 ;;
             ERROR) echo -e "${RED}[ERROR] ${message}${RESET}" >&2 ;;
         esac
     fi
@@ -97,7 +101,7 @@ log() {
 #
 check_requirements() {
     for cmd in curl openssl zip; do
-        if ! command -v "$cmd" &> /dev/null; then
+        if ! command -v "$cmd" &>/dev/null; then
             log "ERROR" "$cmd is not installed. Please install it to continue."
             exit 1
         fi
@@ -108,10 +112,13 @@ check_requirements() {
 # Core Functions
 # ==============================================================================
 
-# curl_call <arguments...>
+# curl_call
 #
 # A wrapper around the curl command that adds logging for debugging
 # and basic error handling.
+#
+# Arguments:
+#   $* - Arguments to pass to curl.
 #
 curl_call() {
     log "DEBUG" "Executing: curl $*"
@@ -123,9 +130,12 @@ curl_call() {
     return $return_code
 }
 
-# display_help [command]
+# display_help
 #
 # Displays the help message for the script or a specific command.
+#
+# Arguments:
+#   $1 - (Optional) Command name to display specific help.
 #
 display_help() {
     case $1 in
@@ -177,11 +187,16 @@ display_help() {
     esac
 }
 
-# encrypt_file <input_file> <key>
+# encrypt_file
 #
 # Encrypts a file using AES-256-CBC with a provided key.
 #
-# Returns: The path to the temporary encrypted file.
+# Arguments:
+#   $1 - Path to the input file.
+#   $2 - Encryption key.
+#
+# Returns:
+#   The path to the temporary encrypted file on stdout.
 #
 encrypt_file() {
     local file="$1"
@@ -197,9 +212,14 @@ encrypt_file() {
     fi
 }
 
-# decrypt_file <input_file> <key> <output_file>
+# decrypt_file
 #
 # Decrypts a file using AES-256-CBC with a provided key.
+#
+# Arguments:
+#   $1 - Path to the input file.
+#   $2 - Decryption key.
+#   $3 - Path to the output file.
 #
 decrypt_file() {
     local file="$1"
@@ -209,9 +229,12 @@ decrypt_file() {
     openssl enc -d -aes-256-cbc -pbkdf2 -in "$file" -out "$outfile" -pass pass:"$key"
 }
 
-# send_file_or_directory <arguments...>
+# send_file_or_directory
 #
-# Handles @the logic for uploading files and directories.
+# Handles the logic for uploading files and directories.
+#
+# Arguments:
+#   $* - Options and paths to files or directories.
 #
 send_file_or_directory() {
     local max_downloads="$TRANSFERSH_MAX_DOWNLOADS"
@@ -223,13 +246,36 @@ send_file_or_directory() {
     # --- Argument Parsing ---
     while [[ $# -gt 0 ]]; do
         case $1 in
-            -d|--max-downloads) max_downloads="$2"; shift 2 ;;
-            -D|--max-days) max_days="$2"; shift 2 ;;
-            -k|--key) encryption_key="$2"; shift 2 ;;
-            -u|--user) AUTH_USER="$2"; auth_provided=true; shift 2 ;;
-            -p|--password) AUTH_PASS="$2"; auth_provided=true; shift 2 ;;
-            -y) request_confirmation=false; shift ;;
-            -h|--help) display_help send; return 0 ;;
+            -d | --max-downloads)
+                max_downloads="$2"
+                shift 2
+                ;;
+            -D | --max-days)
+                max_days="$2"
+                shift 2
+                ;;
+            -k | --key)
+                encryption_key="$2"
+                shift 2
+                ;;
+            -u | --user)
+                AUTH_USER="$2"
+                auth_provided=true
+                shift 2
+                ;;
+            -p | --password)
+                AUTH_PASS="$2"
+                auth_provided=true
+                shift 2
+                ;;
+            -y)
+                request_confirmation=false
+                shift
+                ;;
+            -h | --help)
+                display_help send
+                return 0
+                ;;
             *) break ;;
         esac
     done
@@ -245,7 +291,10 @@ send_file_or_directory() {
         echo -e "${CYAN}You are about to upload:${RESET}"
         for item in "$@"; do echo -e "  ${BLUE}- $(basename "$item")${RESET}"; done
         read -p $'\e[1;35mProceed? (Y/n): \e[0m' confirm
-        [[ "${confirm:-y}" =~ ^[Yy]$ ]] || { log "INFO" "Upload cancelled."; return 0; }
+        [[ "${confirm:-y}" =~ ^[Yy]$ ]] || {
+            log "INFO" "Upload cancelled."
+            return 0
+        }
     fi
 
     # --- Prepare Upload ---
@@ -256,7 +305,7 @@ send_file_or_directory() {
         should_zip=true
         temp_file="$(mktemp -u).zip"
         log "INFO" "Creating zip archive: $temp_file"
-        zip -r "$temp_file" "$@" > /dev/null
+        zip -r "$temp_file" "$@" >/dev/null
         file_name="transfer-$(date +%s).zip"
     else
         temp_file="$1"
@@ -324,9 +373,12 @@ send_file_or_directory() {
     fi
 }
 
-# receive_file_or_directory <arguments...>
+# receive_file_or_directory
 #
 # Handles the logic for downloading files.
+#
+# Arguments:
+#   $* - Options and URL to download.
 #
 receive_file_or_directory() {
     local encryption_key="$TRANSFERSH_ENCRYPTION_KEY"
@@ -337,9 +389,18 @@ receive_file_or_directory() {
     # --- Argument Parsing ---
     while [[ $# -gt 0 ]]; do
         case $1 in
-            -k|--key) encryption_key="$2"; shift 2 ;;
-            -u|--unzip) offer_unzip=true; shift ;;
-            -h|--help) display_help receive; return 0 ;;
+            -k | --key)
+                encryption_key="$2"
+                shift 2
+                ;;
+            -u | --unzip)
+                offer_unzip=true
+                shift
+                ;;
+            -h | --help)
+                display_help receive
+                return 0
+                ;;
             *)
                 if [ -z "$url" ]; then url="$1"; else destination="$1"; fi
                 shift
@@ -358,7 +419,7 @@ receive_file_or_directory() {
 
     # --- Decryption Key ---
     if [[ "$file_name" == *.enc ]] && [ -z "$encryption_key" ]; then
-        read -sp "Enter decryption key: " encryption_key
+        read -rsp "Enter decryption key: " encryption_key
         echo
     fi
 
@@ -403,9 +464,12 @@ receive_file_or_directory() {
     fi
 }
 
-# delete_file_or_directory <delete_url>
+# delete_file_or_directory
 #
 # Deletes a file using its deletion URL.
+#
+# Arguments:
+#   $1 - Deletion URL.
 #
 delete_file_or_directory() {
     if [[ "$1" == "-h" || "$1" == "--help" ]]; then
@@ -423,9 +487,12 @@ delete_file_or_directory() {
     log "INFO" "Delete request sent."
 }
 
-# info_command <url>
+# info_command
 #
 # Retrieves and displays metadata for a file.
+#
+# Arguments:
+#   $1 - URL to retrieve information for.
 #
 info_command() {
     if [[ "$1" == "-h" || "$1" == "--help" ]]; then
@@ -439,13 +506,24 @@ info_command() {
         return 1
     fi
     log "INFO" "Retrieving metadata for: $url"
-    curl_call -I "$url" | \
-    awk '/x-remaining-days/ {print "Remaining Days: " $2} /x-remaining-downloads/ {print "Remaining Downloads: " $2} /Content-Length/ {print "File Size (bytes): " $2} /Content-Type/ {print "MIME Type: " $2}'
+    curl_call -I "$url" |
+        awk '/x-remaining-days/ {print "Remaining Days: " $2} /x-remaining-downloads/ {print "Remaining Downloads: " $2} /Content-Length/ {print "File Size (bytes): " $2} /Content-Type/ {print "MIME Type: " $2}'
 }
 
-# ==============================================================================
-# Main Execution
-# ==============================================================================
+# ------------------------------------------------------------------------------
+# Command wrappers to avoid conflicts with function names
+# ------------------------------------------------------------------------------
+send_command() { send_file_or_directory "$@"; }
+receive_command() { receive_file_or_directory "$@"; }
+delete_command() { delete_file_or_directory "$@"; }
+
+# main
+#
+# Entry point for the script.
+#
+# Arguments:
+#   $* - Command line arguments.
+#
 main() {
     check_requirements
 
@@ -465,10 +543,10 @@ main() {
     shift
 
     case "$command" in
-        send|receive|delete|info)
+        send | receive | delete | info)
             "${command}_command" "$@"
             ;;
-        -h|--help)
+        -h | --help)
             display_help
             ;;
         *)
@@ -478,10 +556,5 @@ main() {
             ;;
     esac
 }
-
-# Rename functions to avoid conflicts with command names
-send_command() { send_file_or_directory "$@"; }
-receive_command() { receive_file_or_directory "$@"; }
-delete_command() { delete_file_or_directory "$@"; }
 
 main "$@"

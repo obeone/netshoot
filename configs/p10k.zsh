@@ -15,285 +15,295 @@
 #   - Separators: Slanted
 #
 # For a comprehensive guide, visit: https://github.com/romkatv/powerlevel10k
+#
 
 # Temporarily override Zsh options to ensure this script runs correctly.
 'builtin' 'local' '-a' 'p10k_config_opts'
-[[ ! -o 'aliases'         ]] || p10k_config_opts+=('aliases')
-[[ ! -o 'sh_glob'         ]] || p10k_config_opts+=('sh_glob')
+[[ ! -o 'aliases' ]] || p10k_config_opts+=('aliases')
+[[ ! -o 'sh_glob' ]] || p10k_config_opts+=('sh_glob')
 [[ ! -o 'no_brace_expand' ]] || p10k_config_opts+=('no_brace_expand')
 'builtin' 'setopt' 'no_aliases' 'no_sh_glob' 'brace_expand'
 
 () {
-  emulate -L zsh -o extended_glob
+    emulate -L zsh -o extended_glob
 
-  # Unset all existing Powerlevel10k configuration options.
-  # This allows for easy reloading of this file (`source ~/.p10k.zsh`).
-  unset -m '(POWERLEVEL9K_*|DEFAULT_USER)~POWERLEVEL9K_GITSTATUS_DIR'
+    # Unset all existing Powerlevel10k configuration options.
+    # This allows for easy reloading of this file (`source ~/.p10k.zsh`).
+    unset -m '(POWERLEVEL9K_*|DEFAULT_USER)~POWERLEVEL9K_GITSTATUS_DIR'
 
-  # Zsh 5.1 or newer is required.
-  [[ $ZSH_VERSION == (5.<1->*|<6->.*) ]] || return
+    # Zsh 5.1 or newer is required.
+    [[ $ZSH_VERSION == (5.<1->* | <6->.*) ]] || return
 
-  # ============================================================================
-  # Prompt Structure
-  # ============================================================================
-  # Defines the segments displayed on the left and right sides of the prompt.
-  # ============================================================================
+    # ============================================================================
+    # Prompt Structure
+    # ============================================================================
+    # Defines the segments displayed on the left and right sides of the prompt.
+    # ============================================================================
 
-  typeset -g POWERLEVEL9K_LEFT_PROMPT_ELEMENTS=(
-    # --- Line 1 ---
-    os_icon                 # OS identifier
-    context                 # user@hostname
-    dir                     # Current directory
-    vcs                     # Git status
-    kubecontext             # Kubernetes context
-    # --- Line 2 ---
-    newline
-    histoff
-    prompt_char             # Prompt symbol (❯)
-  )
+    typeset -g POWERLEVEL9K_LEFT_PROMPT_ELEMENTS=(
+        # --- Line 1 ---
+        os_icon     # OS identifier
+        context     # user@hostname
+        dir         # Current directory
+        vcs         # Git status
+        kubecontext # Kubernetes context
+        # --- Line 2 ---
+        newline
+        histoff
+        prompt_char # Prompt symbol (❯)
+    )
 
-  typeset -g POWERLEVEL9K_RIGHT_PROMPT_ELEMENTS=(
-    # --- Line 1 ---
-    status                  # Exit code of the last command
-    command_execution_time  # Duration of the last command
-    background_jobs         # Presence of background jobs
-    # Language Version Managers
-    asdf                    # asdf version manager
-    nodenv                  # nodenv
-    nvm                     # nvm
-    nodeenv                 # nodeenv
-    pyenv                   # pyenv
-    virtualenv              # Python virtualenv
-    anaconda                # Conda environment
-    goenv                   # goenv
-    rbenv                   # rbenv
-    rvm                     # rvm
-    fvm                     # Flutter version manager
-    luaenv                  # luaenv
-    jenv                    # jenv
-    plenv                   # plenv
-    perlbrew                # perlbrew
-    phpenv                  # phpenv
-    scalaenv                # scalaenv
-    haskell_stack           # Haskell stack
-    # Cloud & Infra
-    aws                     # AWS profile
-    azure                   # Azure account
-    gcloud                  # Google Cloud account
-    terraform               # Terraform workspace
-    # System & Status
-    nordvpn                 # NordVPN status
-    vpn_ip                  # VPN IP address
-    public_ip               # Public IP address
-    load                    # CPU load
-    ram                     # Free RAM
-    swap                    # Used swap
-    battery                 # Battery status
-    wifi                    # WiFi speed
-    time                    # Current time
-    # --- Line 2 ---
-    newline
-  )
+    typeset -g POWERLEVEL9K_RIGHT_PROMPT_ELEMENTS=(
+        # --- Line 1 ---
+        status                 # Exit code of the last command
+        command_execution_time # Duration of the last command
+        background_jobs        # Presence of background jobs
+        # Language Version Managers
+        asdf          # asdf version manager
+        nodenv        # nodenv
+        nvm           # nvm
+        nodeenv       # nodeenv
+        pyenv         # pyenv
+        virtualenv    # Python virtualenv
+        anaconda      # Conda environment
+        goenv         # goenv
+        rbenv         # rbenv
+        rvm           # rvm
+        fvm           # Flutter version manager
+        luaenv        # luaenv
+        jenv          # jenv
+        plenv         # plenv
+        perlbrew      # perlbrew
+        phpenv        # phpenv
+        scalaenv      # scalaenv
+        haskell_stack # Haskell stack
+        # Cloud & Infra
+        aws       # AWS profile
+        azure     # Azure account
+        gcloud    # Google Cloud account
+        terraform # Terraform workspace
+        # System & Status
+        nordvpn   # NordVPN status
+        vpn_ip    # VPN IP address
+        public_ip # Public IP address
+        load      # CPU load
+        ram       # Free RAM
+        swap      # Used swap
+        battery   # Battery status
+        wifi      # WiFi speed
+        time      # Current time
+        # --- Line 2 ---
+        newline
+    )
 
-  # ============================================================================
-  # General Styling
-  # ============================================================================
-  # Defines the overall look and feel of the prompt.
-  # ============================================================================
+    # ============================================================================
+    # General Styling
+    # ============================================================================
+    # Defines the overall look and feel of the prompt.
+    # ============================================================================
 
-  # Character set and icon padding.
-  typeset -g POWERLEVEL9K_MODE=nerdfont-complete
-  typeset -g POWERLEVEL9K_ICON_PADDING=none
+    # Character set and icon padding.
+    typeset -g POWERLEVEL9K_MODE=nerdfont-complete
+    typeset -g POWERLEVEL9K_ICON_PADDING=none
 
-  # Add an empty line before each prompt for spacing.
-  typeset -g POWERLEVEL9K_PROMPT_ADD_NEWLINE=true
+    # Add an empty line before each prompt for spacing.
+    typeset -g POWERLEVEL9K_PROMPT_ADD_NEWLINE=true
 
-  # Default background color.
-  typeset -g POWERLEVEL9K_BACKGROUND=236
+    # Default background color.
+    typeset -g POWERLEVEL9K_BACKGROUND=236
 
-  # Separators between segments.
-  typeset -g POWERLEVEL9K_LEFT_SEGMENT_SEPARATOR='\uE0BC'
-  typeset -g POWERLEVEL9K_RIGHT_SEGMENT_SEPARATOR='\uE0BA'
-  typeset -g POWERLEVEL9K_LEFT_SUBSEGMENT_SEPARATOR='%244F\u2571'
-  typeset -g POWERLEVEL9K_RIGHT_SUBSEGMENT_SEPARATOR='%244F\u2571'
+    # Separators between segments.
+    typeset -g POWERLEVEL9K_LEFT_SEGMENT_SEPARATOR='\uE0BC'
+    typeset -g POWERLEVEL9K_RIGHT_SEGMENT_SEPARATOR='\uE0BA'
+    typeset -g POWERLEVEL9K_LEFT_SUBSEGMENT_SEPARATOR='%244F\u2571'
+    typeset -g POWERLEVEL9K_RIGHT_SUBSEGMENT_SEPARATOR='%244F\u2571'
 
-  # Prompt frame (the lines that surround the prompt).
-  typeset -g POWERLEVEL9K_MULTILINE_FIRST_PROMPT_PREFIX='%240F╭─'
-  typeset -g POWERLEVEL9K_MULTILINE_NEWLINE_PROMPT_PREFIX='%240F├─'
-  typeset -g POWERLEVEL9K_MULTILINE_LAST_PROMPT_PREFIX='%240F╰─'
-  typeset -g POWERLEVEL9K_MULTILINE_FIRST_PROMPT_SUFFIX='%240F─╮'
-  typeset -g POWERLEVEL9K_MULTILINE_NEWLINE_PROMPT_SUFFIX='%240F─┤'
-  typeset -g POWERLEVEL9K_MULTILINE_LAST_PROMPT_SUFFIX='%240F─╯'
+    # Prompt frame (the lines that surround the prompt).
+    typeset -g POWERLEVEL9K_MULTILINE_FIRST_PROMPT_PREFIX='%240F╭─'
+    typeset -g POWERLEVEL9K_MULTILINE_NEWLINE_PROMPT_PREFIX='%240F├─'
+    typeset -g POWERLEVEL9K_MULTILINE_LAST_PROMPT_PREFIX='%240F╰─'
+    typeset -g POWERLEVEL9K_MULTILINE_FIRST_PROMPT_SUFFIX='%240F─╮'
+    typeset -g POWERLEVEL9K_MULTILINE_NEWLINE_PROMPT_SUFFIX='%240F─┤'
+    typeset -g POWERLEVEL9K_MULTILINE_LAST_PROMPT_SUFFIX='%240F─╯'
 
-  # Filler between left and right prompts.
-  typeset -g POWERLEVEL9K_MULTILINE_FIRST_PROMPT_GAP_CHAR='.'
-  typeset -g POWERLEVEL9K_MULTILINE_FIRST_PROMPT_GAP_FOREGROUND=240
+    # Filler between left and right prompts.
+    typeset -g POWERLEVEL9K_MULTILINE_FIRST_PROMPT_GAP_CHAR='.'
+    typeset -g POWERLEVEL9K_MULTILINE_FIRST_PROMPT_GAP_FOREGROUND=240
 
-  # ============================================================================
-  # Segment-Specific Styling
-  # ============================================================================
-  # Customize individual segments.
-  # ============================================================================
+    # ============================================================================
+    # Segment-Specific Styling
+    # ============================================================================
+    # Customize individual segments.
+    # ============================================================================
 
-  # -------------------- os_icon: OS Identifier --------------------
-  typeset -g POWERLEVEL9K_OS_ICON_FOREGROUND=255
+    # -------------------- os_icon: OS Identifier --------------------
+    typeset -g POWERLEVEL9K_OS_ICON_FOREGROUND=255
 
-  # -------------------- prompt_char: Prompt Symbol --------------------
-  typeset -g POWERLEVEL9K_PROMPT_CHAR_BACKGROUND=
-  typeset -g POWERLEVEL9K_PROMPT_CHAR_OK_VIINS_FOREGROUND=76
-  typeset -g POWERLEVEL9K_PROMPT_CHAR_ERROR_VIINS_FOREGROUND=196
-  typeset -g POWERLEVEL9K_PROMPT_CHAR_OK_VICMD_FOREGROUND=76
-  typeset -g POWERLEVEL9K_PROMPT_CHAR_ERROR_VICMD_FOREGROUND=196
-  typeset -g POWERLEVEL9K_PROMPT_CHAR_OK_VIVIS_FOREGROUND=76
-  typeset -g POWERLEVEL9K_PROMPT_CHAR_ERROR_VIVIS_FOREGROUND=196
-  typeset -g POWERLEVEL9K_PROMPT_CHAR_OK_VIOWR_FOREGROUND=76
-  typeset -g POWERLEVEL9K_PROMPT_CHAR_ERROR_VIOWR_FOREGROUND=196
-  typeset -g POWERLEVEL9K_PROMPT_CHAR_OK_VIINS_CONTENT_EXPANSION='❯'
-  typeset -g POWERLEVEL9K_PROMPT_CHAR_ERROR_VIINS_CONTENT_EXPANSION='❯'
-  typeset -g POWERLEVEL9K_PROMPT_CHAR_OK_VICMD_CONTENT_EXPANSION='❮'
-  typeset -g POWERLEVEL9K_PROMPT_CHAR_ERROR_VICMD_CONTENT_EXPANSION='❮'
+    # -------------------- prompt_char: Prompt Symbol --------------------
+    typeset -g POWERLEVEL9K_PROMPT_CHAR_BACKGROUND=
+    typeset -g POWERLEVEL9K_PROMPT_CHAR_OK_VIINS_FOREGROUND=76
+    typeset -g POWERLEVEL9K_PROMPT_CHAR_ERROR_VIINS_FOREGROUND=196
+    typeset -g POWERLEVEL9K_PROMPT_CHAR_OK_VICMD_FOREGROUND=76
+    typeset -g POWERLEVEL9K_PROMPT_CHAR_ERROR_VICMD_FOREGROUND=196
+    typeset -g POWERLEVEL9K_PROMPT_CHAR_OK_VIVIS_FOREGROUND=76
+    typeset -g POWERLEVEL9K_PROMPT_CHAR_ERROR_VIVIS_FOREGROUND=196
+    typeset -g POWERLEVEL9K_PROMPT_CHAR_OK_VIOWR_FOREGROUND=76
+    typeset -g POWERLEVEL9K_PROMPT_CHAR_ERROR_VIOWR_FOREGROUND=196
+    typeset -g POWERLEVEL9K_PROMPT_CHAR_OK_VIINS_CONTENT_EXPANSION='❯'
+    typeset -g POWERLEVEL9K_PROMPT_CHAR_ERROR_VIINS_CONTENT_EXPANSION='❯'
+    typeset -g POWERLEVEL9K_PROMPT_CHAR_OK_VICMD_CONTENT_EXPANSION='❮'
+    typeset -g POWERLEVEL9K_PROMPT_CHAR_ERROR_VICMD_CONTENT_EXPANSION='❮'
 
-  # -------------------- dir: Current Directory --------------------
-  typeset -g POWERLEVEL9K_DIR_FOREGROUND=31
-  typeset -g POWERLEVEL9K_DIR_SHORTENED_FOREGROUND=103
-  typeset -g POWERLEVEL9K_DIR_ANCHOR_FOREGROUND=39
-  typeset -g POWERLEVEL9K_DIR_ANCHOR_BOLD=true
-  typeset -g POWERLEVEL9K_SHORTEN_STRATEGY=truncate_to_unique
-  typeset -g POWERLEVEL9K_SHORTEN_DIR_LENGTH=1
-  typeset -g POWERLEVEL9K_DIR_MAX_LENGTH=80
-  local anchor_files=(
-    .bzr .citc .git .hg .node-version .python-version .go-version
-    .ruby-version .lua-version .java-version .perl-version .php-version
-    .tool-version .shorten_folder_marker .svn .terraform CVS Cargo.toml
-    composer.json go.mod package.json stack.yaml
-  )
-  typeset -g POWERLEVEL9K_SHORTEN_FOLDER_MARKER="(${(j:|:)anchor_files})"
+    # -------------------- dir: Current Directory --------------------
+    typeset -g POWERLEVEL9K_DIR_FOREGROUND=31
+    typeset -g POWERLEVEL9K_DIR_SHORTENED_FOREGROUND=103
+    typeset -g POWERLEVEL9K_DIR_ANCHOR_FOREGROUND=39
+    typeset -g POWERLEVEL9K_DIR_ANCHOR_BOLD=true
+    typeset -g POWERLEVEL9K_SHORTEN_STRATEGY=truncate_to_unique
+    typeset -g POWERLEVEL9K_SHORTEN_DIR_LENGTH=1
+    typeset -g POWERLEVEL9K_DIR_MAX_LENGTH=80
+    local anchor_files=(
+        .bzr .citc .git .hg .node-version .python-version .go-version
+        .ruby-version .lua-version .java-version .perl-version .php-version
+        .tool-version .shorten_folder_marker .svn .terraform CVS Cargo.toml
+        composer.json go.mod package.json stack.yaml
+    )
+    typeset -g POWERLEVEL9K_SHORTEN_FOLDER_MARKER="(${(j:|:)anchor_files})"
 
-  # -------------------- vcs: Git Status --------------------
-  typeset -g POWERLEVEL9K_VCS_BRANCH_ICON='\uF126 '
-  typeset -g POWERLEVEL9K_VCS_UNTRACKED_ICON='?'
-  typeset -g POWERLEVEL9K_VCS_VISUAL_IDENTIFIER_COLOR=76
-  typeset -g POWERLEVEL9K_VCS_LOADING_VISUAL_IDENTIFIER_COLOR=244
-  typeset -g POWERLEVEL9K_VCS_PREFIX='%246Fon '
-  typeset -g POWERLEVEL9K_VCS_BACKENDS=(git)
-  typeset -g POWERLEVEL9K_VCS_CLEAN_FOREGROUND=76
-  typeset -g POWERLEVEL9K_VCS_UNTRACKED_FOREGROUND=76
-  typeset -g POWERLEVEL9K_VCS_MODIFIED_FOREGROUND=178
+    # -------------------- vcs: Git Status --------------------
+    typeset -g POWERLEVEL9K_VCS_BRANCH_ICON='\uF126 '
+    typeset -g POWERLEVEL9K_VCS_UNTRACKED_ICON='?'
+    typeset -g POWERLEVEL9K_VCS_VISUAL_IDENTIFIER_COLOR=76
+    typeset -g POWERLEVEL9K_VCS_LOADING_VISUAL_IDENTIFIER_COLOR=244
+    typeset -g POWERLEVEL9K_VCS_PREFIX='%246Fon '
+    typeset -g POWERLEVEL9K_VCS_BACKENDS=(git)
+    typeset -g POWERLEVEL9K_VCS_CLEAN_FOREGROUND=76
+    typeset -g POWERLEVEL9K_VCS_UNTRACKED_FOREGROUND=76
+    typeset -g POWERLEVEL9K_VCS_MODIFIED_FOREGROUND=178
 
-  # Custom Git status formatter.
-  function my_git_formatter() {
-    emulate -L zsh
-    if [[ -n $P9K_CONTENT ]]; then
-      typeset -g my_git_format=$P9K_CONTENT
-      return
-    fi
+    # my_git_formatter
+    #
+    # Custom Git status formatter.
+    #
+    # Arguments:
+    #   $1 - 1 if loaded, 0 if loading.
+    #
+    function my_git_formatter() {
+        emulate -L zsh
+        if [[ -n $P9K_CONTENT ]]; then
+            typeset -g my_git_format=$P9K_CONTENT
+            return
+        fi
 
-    local meta='%246F' clean='%76F' modified='%178F' untracked='%39F' conflicted='%196F'
-    if (( !$1 )); then
-      meta='%244F' clean='%244F' modified='%244F' untracked='%244F' conflicted='%244F'
-    fi
+        local meta='%246F' clean='%76F' modified='%178F' untracked='%39F' conflicted='%196F'
+        if ((!$1)); then
+            meta='%244F' clean='%244F' modified='%244F' untracked='%244F' conflicted='%244F'
+        fi
 
-    local res
-    if [[ -n $VCS_STATUS_LOCAL_BRANCH ]]; then
-      local branch=${(V)VCS_STATUS_LOCAL_BRANCH}
-      (( $#branch > 32 )) && branch[13,-13]="…"
-      res+="${clean}${(g::)POWERLEVEL9K_VCS_BRANCH_ICON}${branch//\%/%%}"
-    fi
+        local res
+        if [[ -n $VCS_STATUS_LOCAL_BRANCH ]]; then
+            local branch=${(V)VCS_STATUS_LOCAL_BRANCH}
+            (($#branch > 32)) && branch[13, -13]="…"
+            res+="${clean}${(g::)POWERLEVEL9K_VCS_BRANCH_ICON}${branch//\%/%%}"
+        fi
 
-    if [[ -n $VCS_STATUS_TAG && -z $VCS_STATUS_LOCAL_BRANCH ]]; then
-      local tag=${(V)VCS_STATUS_TAG}
-      (( $#tag > 32 )) && tag[13,-13]="…"
-      res+="${meta}#${clean}${tag//\%/%%}"
-    fi
+        if [[ -n $VCS_STATUS_TAG && -z $VCS_STATUS_LOCAL_BRANCH ]]; then
+            local tag=${(V)VCS_STATUS_TAG}
+            (($#tag > 32)) && tag[13, -13]="…"
+            res+="${meta}#${clean}${tag//\%/%%}"
+        fi
 
-    [[ -z $VCS_STATUS_LOCAL_BRANCH && -z $VCS_STATUS_TAG ]] && res+="${meta}@${clean}${VCS_STATUS_COMMIT[1,8]}"
-    [[ -n ${VCS_STATUS_REMOTE_BRANCH:#$VCS_STATUS_LOCAL_BRANCH} ]] && res+="${meta}:${clean}${(V)VCS_STATUS_REMOTE_BRANCH//\%/%%}"
-    [[ $VCS_STATUS_COMMIT_SUMMARY == (|*[^[:alnum:]])(wip|WIP)(|[^[:alnum:]]*) ]] && res+=" ${modified}wip"
-    (( VCS_STATUS_COMMITS_BEHIND )) && res+=" ${clean}⇣${VCS_STATUS_COMMITS_BEHIND}"
-    (( VCS_STATUS_COMMITS_AHEAD && !VCS_STATUS_COMMITS_BEHIND )) && res+=" "
-    (( VCS_STATUS_COMMITS_AHEAD  )) && res+="${clean}⇡${VCS_STATUS_COMMITS_AHEAD}"
-    (( VCS_STATUS_STASHES )) && res+=" ${clean}*${VCS_STATUS_STASHES}"
-    [[ -n $VCS_STATUS_ACTION ]] && res+=" ${conflicted}${VCS_STATUS_ACTION}"
-    (( VCS_STATUS_NUM_CONFLICTED )) && res+=" ${conflicted}~${VCS_STATUS_NUM_CONFLICTED}"
-    (( VCS_STATUS_NUM_STAGED )) && res+=" ${modified}+${VCS_STATUS_NUM_STAGED}"
-    (( VCS_STATUS_NUM_UNSTAGED )) && res+=" ${modified}!${VCS_STATUS_NUM_UNSTAGED}"
-    (( VCS_STATUS_NUM_UNTRACKED )) && res+=" ${untracked}${(g::)POWERLEVEL9K_VCS_UNTRACKED_ICON}${VCS_STATUS_NUM_UNTRACKED}"
-    (( VCS_STATUS_HAS_UNSTAGED == -1 )) && res+=" ${modified}─"
-    typeset -g my_git_format=$res
-  }
-  functions -M my_git_formatter 2>/dev/null
-  typeset -g POWERLEVEL9K_VCS_CONTENT_EXPANSION='${$((my_git_formatter(1)))+${my_git_format}}'
-  typeset -g POWERLEVEL9K_VCS_LOADING_CONTENT_EXPANSION='${$((my_git_formatter(0)))+${my_git_format}}'
+        [[ -z $VCS_STATUS_LOCAL_BRANCH && -z $VCS_STATUS_TAG ]] && res+="${meta}@${clean}${VCS_STATUS_COMMIT[1, 8]}"
+        [[ -n ${VCS_STATUS_REMOTE_BRANCH:#$VCS_STATUS_LOCAL_BRANCH} ]] && res+="${meta}:${clean}${(V)VCS_STATUS_REMOTE_BRANCH//\%/%%}"
+        [[ $VCS_STATUS_COMMIT_SUMMARY == (|*[^[:alnum:]])(wip | WIP)(|[^[:alnum:]]*) ]] && res+=" ${modified}wip"
+        ((VCS_STATUS_COMMITS_BEHIND)) && res+=" ${clean}⇣${VCS_STATUS_COMMITS_BEHIND}"
+        ((VCS_STATUS_COMMITS_AHEAD && !VCS_STATUS_COMMITS_BEHIND)) && res+=" "
+        ((VCS_STATUS_COMMITS_AHEAD)) && res+="${clean}⇡${VCS_STATUS_COMMITS_AHEAD}"
+        ((VCS_STATUS_STASHES)) && res+=" ${clean}*${VCS_STATUS_STASHES}"
+        [[ -n $VCS_STATUS_ACTION ]] && res+=" ${conflicted}${VCS_STATUS_ACTION}"
+        ((VCS_STATUS_NUM_CONFLICTED)) && res+=" ${conflicted}~${VCS_STATUS_NUM_CONFLICTED}"
+        ((VCS_STATUS_NUM_STAGED)) && res+=" ${modified}+${VCS_STATUS_NUM_STAGED}"
+        ((VCS_STATUS_NUM_UNSTAGED)) && res+=" ${modified}!${VCS_STATUS_NUM_UNSTAGED}"
+        ((VCS_STATUS_NUM_UNTRACKED)) && res+=" ${untracked}${(g::)POWERLEVEL9K_VCS_UNTRACKED_ICON}${VCS_STATUS_NUM_UNTRACKED}"
+        ((VCS_STATUS_HAS_UNSTAGED == -1)) && res+=" ${modified}─"
+        typeset -g my_git_format=$res
+    }
+    functions -M my_git_formatter 2>/dev/null
+    typeset -g POWERLEVEL9K_VCS_CONTENT_EXPANSION='${$((my_git_formatter(1)))+${my_git_format}}'
+    typeset -g POWERLEVEL9K_VCS_LOADING_CONTENT_EXPANSION='${$((my_git_formatter(0)))+${my_git_format}}'
 
-  # -------------------- status: Exit Code --------------------
-  typeset -g POWERLEVEL9K_STATUS_OK=false
-  typeset -g POWERLEVEL9K_STATUS_ERROR=false
+    # -------------------- status: Exit Code --------------------
+    typeset -g POWERLEVEL9K_STATUS_OK=false
+    typeset -g POWERLEVEL9K_STATUS_ERROR=false
 
-  # -------------------- command_execution_time: Command Duration --------------------
-  typeset -g POWERLEVEL9K_COMMAND_EXECUTION_TIME_THRESHOLD=3
-  typeset -g POWERLEVEL9K_COMMAND_EXECUTION_TIME_FOREGROUND=248
+    # -------------------- command_execution_time: Command Duration --------------------
+    typeset -g POWERLEVEL9K_COMMAND_EXECUTION_TIME_THRESHOLD=3
+    typeset -g POWERLEVEL9K_COMMAND_EXECUTION_TIME_FOREGROUND=248
 
-  # -------------------- background_jobs: Background Jobs --------------------
-  typeset -g POWERLEVEL9K_BACKGROUND_JOBS_VERBOSE=false
-  typeset -g POWERLEVEL9K_BACKGROUND_JOBS_FOREGROUND=37
+    # -------------------- background_jobs: Background Jobs --------------------
+    typeset -g POWERLEVEL9K_BACKGROUND_JOBS_VERBOSE=false
+    typeset -g POWERLEVEL9K_BACKGROUND_JOBS_FOREGROUND=37
 
-  # -------------------- context: user@hostname --------------------
-  typeset -g POWERLEVEL9K_CONTEXT_ROOT_FOREGROUND=178
-  typeset -g POWERLEVEL9K_CONTEXT_REMOTE_FOREGROUND=180
-  typeset -g POWERLEVEL9K_CONTEXT_FOREGROUND=180
-  typeset -g POWERLEVEL9K_CONTEXT_ROOT_TEMPLATE='%B%n@%m'
-  typeset -g POWERLEVEL9K_CONTEXT_TEMPLATE='%n@%m'
-  typeset -g POWERLEVEL9K_CONTEXT_DEFAULT_CONTENT_EXPANSION=
+    # -------------------- context: user@hostname --------------------
+    typeset -g POWERLEVEL9K_CONTEXT_ROOT_FOREGROUND=178
+    typeset -g POWERLEVEL9K_CONTEXT_REMOTE_FOREGROUND=180
+    typeset -g POWERLEVEL9K_CONTEXT_FOREGROUND=180
+    typeset -g POWERLEVEL9K_CONTEXT_ROOT_TEMPLATE='%B%n@%m'
+    typeset -g POWERLEVEL9K_CONTEXT_TEMPLATE='%n@%m'
+    typeset -g POWERLEVEL9K_CONTEXT_DEFAULT_CONTENT_EXPANSION=
 
-  # -------------------- virtualenv: Python Virtualenv --------------------
-  typeset -g POWERLEVEL9K_VIRTUALENV_FOREGROUND=37
-  typeset -g POWERLEVEL9K_VIRTUALENV_SHOW_PYTHON_VERSION=false
-  typeset -g POWERLEVEL9K_VIRTUALENV_SHOW_WITH_PYENV=false
+    # -------------------- virtualenv: Python Virtualenv --------------------
+    typeset -g POWERLEVEL9K_VIRTUALENV_FOREGROUND=37
+    typeset -g POWERLEVEL9K_VIRTUALENV_SHOW_PYTHON_VERSION=false
+    typeset -g POWERLEVEL9K_VIRTUALENV_SHOW_WITH_PYENV=false
 
-  # -------------------- anaconda: Conda Environment --------------------
-  typeset -g POWERLEVEL9K_ANACONDA_FOREGROUND=37
+    # -------------------- anaconda: Conda Environment --------------------
+    typeset -g POWERLEVEL9K_ANACONDA_FOREGROUND=37
 
-  # -------------------- pyenv: Python pyenv --------------------
-  typeset -g POWERLEVEL9K_PYENV_FOREGROUND=37
+    # -------------------- pyenv: Python pyenv --------------------
+    typeset -g POWERLEVEL9K_PYENV_FOREGROUND=37
 
-  # -------------------- kubecontext: Kubernetes Context --------------------
-  typeset -g POWERLEVEL9K_KUBECONTEXT_SHOW_ON_COMMAND='kubectl|helm|kubens|kubectx|oc|istioctl|k9s'
-  typeset -g POWERLEVEL9K_KUBECONTEXT_DEFAULT_FOREGROUND=134
-  typeset -g POWERLEVEL9K_KUBECONTEXT_DEFAULT_CONTENT_EXPANSION='${P9K_KUBECONTEXT_CLOUD_CLUSTER:-${P9K_KUBECONTEXT_NAME}}${${:-/$P9K_KUBECONTEXT_NAMESPACE}:#/default}'
+    # -------------------- kubecontext: Kubernetes Context --------------------
+    typeset -g POWERLEVEL9K_KUBECONTEXT_SHOW_ON_COMMAND='kubectl|helm|kubens|kubectx|oc|istioctl|k9s'
+    typeset -g POWERLEVEL9K_KUBECONTEXT_DEFAULT_FOREGROUND=134
+    typeset -g POWERLEVEL9K_KUBECONTEXT_DEFAULT_CONTENT_EXPANSION='${P9K_KUBECONTEXT_CLOUD_CLUSTER:-${P9K_KUBECONTEXT_NAME}}${${:-/$P9K_KUBECONTEXT_NAMESPACE}:#/default}'
 
-  # -------------------- aws: AWS Profile --------------------
-  typeset -g POWERLEVEL9K_AWS_SHOW_ON_COMMAND='aws|awless|terraform|pulumi|terragrunt'
-  typeset -g POWERLEVEL9K_AWS_DEFAULT_FOREGROUND=208
+    # -------------------- aws: AWS Profile --------------------
+    typeset -g POWERLEVEL9K_AWS_SHOW_ON_COMMAND='aws|awless|terraform|pulumi|terragrunt'
+    typeset -g POWERLEVEL9K_AWS_DEFAULT_FOREGROUND=208
 
-  # -------------------- time: Current Time --------------------
-  typeset -g POWERLEVEL9K_TIME_FOREGROUND=66
-  typeset -g POWERLEVEL9K_TIME_FORMAT='%D{%H:%M:%S}'
+    # -------------------- time: Current Time --------------------
+    typeset -g POWERLEVEL9K_TIME_FOREGROUND=66
+    typeset -g POWERLEVEL9K_TIME_FORMAT='%D{%H:%M:%S}'
 
-  # ============================================================================
-  # Advanced Features
-  # ============================================================================
+    # ============================================================================
+    # Advanced Features
+    # ============================================================================
 
-  # Transient prompt (trims prompt after command execution).
-  typeset -g POWERLEVEL9K_TRANSIENT_PROMPT=always
+    # Transient prompt (trims prompt after command execution).
+    typeset -g POWERLEVEL9K_TRANSIENT_PROMPT=always
 
-  # Instant prompt (for faster shell startup).
-  typeset -g POWERLEVEL9K_INSTANT_PROMPT=verbose
+    # Instant prompt (for faster shell startup).
+    typeset -g POWERLEVEL9K_INSTANT_PROMPT=verbose
 
-  # Disable hot-reloading for a minor performance boost.
-  typeset -g POWERLEVEL9K_DISABLE_HOT_RELOAD=true
+    # Disable hot-reloading for a minor performance boost.
+    typeset -g POWERLEVEL9K_DISABLE_HOT_RELOAD=true
 
-  # Custom segment to indicate if history is disabled.
-  function prompt_histoff() {
-    [[ $HIST_IGNORE_ALL = true ]] && p10k segment -i '😈'
-  }
+    # prompt_histoff
+    #
+    # Custom segment to indicate if history is disabled.
+    #
+    function prompt_histoff() {
+        [[ $HIST_IGNORE_ALL = true ]] && p10k segment -i '😈'
+    }
 
-  # Reload configuration if p10k is already loaded.
-  (( ! $+functions[p10k] )) || p10k reload
+    # Reload configuration if p10k is already loaded.
+    ((!$+functions[p10k])) || p10k reload
 }
 
 # Set the configuration file path for `p10k configure`.
 typeset -g POWERLEVEL9K_CONFIG_FILE=${${(%):-%x}:a}
 
 # Restore original Zsh options.
-(( ${#p10k_config_opts} )) && setopt ${p10k_config_opts[@]}
+((${#p10k_config_opts})) && setopt ${p10k_config_opts[@]}
 'builtin' 'unset' 'p10k_config_opts'

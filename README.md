@@ -1,174 +1,282 @@
-# 🚀 Netshoot: Your Ultimate Network Troubleshooting Docker Image 🐳
+# 🚀 Netshoot: Network Troubleshooting Swiss Army Knife 🐳
 
 [![Docker Pulls](https://img.shields.io/docker/pulls/obeoneorg/netshoot?style=for-the-badge&logo=docker)](https://hub.docker.com/r/obeoneorg/netshoot)
 [![GitHub Stars](https://img.shields.io/github/stars/obeone/netshoot?style=for-the-badge&logo=github)](https://github.com/obeone/netshoot)
 [![GitHub License](https://img.shields.io/github/license/obeone/netshoot?style=for-the-badge)](https://github.com/obeone/netshoot/blob/main/LICENSE)
 
-**Netshoot** is a powerful, multi-tool Docker image designed for comprehensive network troubleshooting and analysis. Built on **Debian 13 Trixie** (stable), it bundles a vast collection of essential networking utilities, system tools, and multiple container runtimes into a single, convenient package.
+**Netshoot** is a comprehensive Docker image packed with 60+ networking and system tools for troubleshooting, analysis, and debugging. Built on **Debian 13 Trixie** with an enhanced Zsh shell, it's your go-to toolkit for network diagnostics in containerized environments.
 
-Whether you're debugging a complex Kubernetes networking issue, analyzing traffic, or simply need a versatile toolkit, `netshoot` provides a ready-to-use, enhanced shell environment to get the job done efficiently.
+## 📋 Table of Contents
 
----
+- [Why Netshoot?](#-why-netshoot)
+- [Quick Start](#-quick-start)
+- [Common Use Cases](#-common-use-cases)
+- [Image Variants](#-image-variants)
+- [Included Tools](#-included-tools)
+- [Advanced Usage](#-advanced-usage)
+- [Building from Source](#-building-from-source)
+- [Contributing](#-contributing)
 
-## ✨ Key Features
+## 🎯 Why Netshoot?
 
-- **📦 Rich Toolset**: A vast collection of networking, system, and container tools with detailed descriptions.
-- **🔧 Enhanced Shell Experience**: Features **Zsh** with **Oh My Zsh**, **Powerlevel10k** theme, and plugins for auto-suggestions and syntax highlighting.
-- **⚙️ Multiple Variants**: Provides specialized images with different container runtimes (**Docker**, **Podman**, **nerdctl**) to fit your needs.
-- **🐍 Python Ready**: Equipped with `python3`, `pipx`, and `uv` for fast Python package management.
-- **🌐 Based on Debian 13 Trixie**: A stable, modern, and secure foundation.
-- **📁 Easy File Transfers**: Includes a handy `transfer.sh` script for quick file sharing.
+- **🔧 Everything You Need**: 60+ pre-installed tools covering networking, system diagnostics, and container management
+- **⚡ Enhanced Shell**: Zsh with Oh My Zsh, Powerlevel10k theme, auto-suggestions, and syntax highlighting
+- **🔀 Multiple Variants**: Choose from base, Docker, Podman, nerdctl, or containerd variants
+- **🐍 Python Ready**: Includes Python 3, pipx, and uv for scripting and automation
+- **📦 Multi-Platform**: Supports both AMD64 and ARM64 architectures
+- **🔒 Secure Base**: Built on Debian 13 Trixie stable with regular updates
 
----
+## ⚡ Quick Start
 
-## 🚀 Getting Started
-
-The `latest` tag provides a comprehensive image with all tools but without a pre-installed container runtime to keep it lightweight.
+Pull and run the base image:
 
 ```bash
 docker pull obeoneorg/netshoot:latest
-```
-
-Launch an interactive session to start troubleshooting:
-
-```bash
 docker run -it --rm obeoneorg/netshoot
 ```
 
----
+Use with host networking for full network access:
 
-## 🏷️ Available Tags & Variants
-
-`Netshoot` comes in several variants, each tailored for a specific use case. Choose the one that best fits your environment.
-
-| Variant           | Docker Tags                               | Description                                                                      |
-| ----------------- | ----------------------------------------- | -------------------------------------------------------------------------------- |
-| **Base**          | `latest`, `debian`, `debian-latest`       | The standard image with all networking and system tools, but no container runtime. |
-| **Docker**        | `docker`, `debian-docker`                 | Includes all base tools plus the **Docker** CLI and `docker-compose`.            |
-| **Podman**        | `podman`, `debian-podman`                 | Includes all base tools plus **Podman**.                                         |
-| **nerdctl**       | `nerdctl`, `debian-nerdctl`               | Includes all base tools plus **nerdctl** (full version).                         |
-| **containerd**    | `containerd`, `debian-containerd`         | Includes all base tools plus **containerd** and its CLI.                         |
-
-**Example:** To pull the variant with Docker support:
 ```bash
-docker pull obeoneorg/netshoot:docker
+docker run -it --rm --network=host obeoneorg/netshoot
 ```
 
----
+Debug a specific container's network namespace:
+
+```bash
+# Get container PID
+docker inspect -f '{{.State.Pid}}' <container-name>
+
+# Enter the network namespace
+docker run -it --rm --network=container:<container-name> obeoneorg/netshoot
+```
+
+## 💡 Common Use Cases
+
+### Kubernetes Pod Debugging
+
+```bash
+# Run as a sidecar for debugging
+kubectl run netshoot --rm -it --image=obeoneorg/netshoot
+
+# Debug a specific pod's network
+kubectl run netshoot --rm -it --image=obeoneorg/netshoot --overrides='
+{
+  "spec": {
+    "hostNetwork": true,
+    "containers": [{
+      "name": "netshoot",
+      "image": "obeoneorg/netshoot",
+      "stdin": true,
+      "tty": true
+    }]
+  }
+}'
+```
+
+### Network Performance Testing
+
+```bash
+# Start iperf3 server
+docker run -it --rm -p 5201:5201 obeoneorg/netshoot iperf3 -s
+
+# Run client test from another container
+docker run -it --rm obeoneorg/netshoot iperf3 -c <server-ip>
+```
+
+### Traffic Analysis
+
+```bash
+# Capture packets on specific interface
+docker run -it --rm --network=host obeoneorg/netshoot tcpdump -i eth0 -w /tmp/capture.pcap
+
+# Analyze HTTP traffic
+docker run -it --rm --network=host obeoneorg/netshoot ngrep -q -W byline "GET|POST" tcp port 80
+```
+
+### DNS Troubleshooting
+
+```bash
+# Comprehensive DNS query
+docker run -it --rm obeoneorg/netshoot dig +trace example.com
+
+# Check DNS propagation
+docker run -it --rm obeoneorg/netshoot dig @8.8.8.8 example.com
+```
+
+## 🏷️ Image Variants
+
+Choose the variant that matches your container runtime needs:
+
+| Variant        | Tags                                | Use Case                                              |
+| -------------- | ----------------------------------- | ----------------------------------------------------- |
+| **Base**       | `latest`, `debian`, `debian-latest` | Network troubleshooting without container runtime     |
+| **Docker**     | `docker`, `debian-docker`           | Docker-in-Docker scenarios, CI/CD pipelines           |
+| **Podman**     | `podman`, `debian-podman`           | Rootless container management and testing             |
+| **nerdctl**    | `nerdctl`, `debian-nerdctl`         | nerdctl client for existing container runtimes        |
+| **containerd** | `containerd`, `debian-containerd`   | Full containerd stack with nerdctl                    |
+| **Slim**       | `slim`, `slim-latest`               | Minimal toolset for resource-constrained environments |
+
+### Pulling Specific Variants
+
+```bash
+# Base image (recommended for most use cases)
+docker pull obeoneorg/netshoot:latest
+
+# Docker variant for CI/CD
+docker pull obeoneorg/netshoot:docker
+
+# Slim variant for minimal footprint
+docker pull obeoneorg/netshoot:slim
+```
 
 ## 🛠️ Included Tools
 
-This image is loaded with tools to cover all your troubleshooting needs.
+Netshoot includes 60+ carefully selected tools organized by category:
 
-### 🌐 Networking Tools
+### 🌐 Network Analysis & Diagnostics
 
-| Tool              | Description                                                 |
-| ----------------- | ----------------------------------------------------------- |
-| `apache2-utils`   | Utilities for web server administration (e.g., `ab`).       |
-| `bind9-utils`     | DNS utilities like `dig`, `host`, and `nslookup`.           |
-| `bird`            | A dynamic IP routing daemon.                                |
-| `bridge-utils`    | Utilities for configuring the Linux Ethernet bridge.        |
-| `conntrack`       | Command-line interface for connection tracking.             |
-| `curl`            | A powerful tool for transferring data with URLs.            |
-| `dhcping`         | A tool to check if a DHCP server is running.                |
-| `dnsutils`        | Clients for DNS queries (see `bind9-utils`).                |
-| `ethtool`         | Utility for displaying or changing Ethernet card settings.  |
-| `fping`           | A utility to ping multiple hosts quickly.                   |
-| `httpie`          | A user-friendly command-line HTTP client.                   |
-| `iftop`           | Displays bandwidth usage on an interface.                   |
-| `iperf` / `iperf3`| Tools for network performance measurement and tuning.       |
-| `iproute2`        | The modern Linux networking toolkit (`ip`, `ss`, etc.).     |
-| `ipset`           | A framework for IP address sets in the Linux kernel.        |
-| `iptables`        | Administration tool for IPv4 packet filtering and NAT.      |
-| `iputils-ping`    | The standard `ping` utility.                                |
-| `ipvsadm`         | IP Virtual Server administration utility.                   |
-| `mtr`             | A network diagnostic tool combining `ping` and `traceroute`.|
-| `netcat-openbsd`  | A versatile networking utility for reading/writing data.    |
-| `net-tools`       | Classic networking tools like `ifconfig`, `netstat`, `route`.|
-| `nftables`        | The successor to `iptables` for packet filtering.           |
-| `ngrep`           | A network-aware `grep` for packet streams.                  |
-| `nmap`            | A powerful network scanner and security auditor.            |
-| `openssh-client`  | Secure Shell (SSH) client.                                  |
-| `socat`           | A multipurpose relay for bidirectional data transfer.       |
-| `speedtest-cli`   | Command-line interface for testing internet bandwidth.      |
-| `swaks`           | Swiss Army Knife for SMTP; a flexible SMTP testing tool.    |
-| `tcpdump`         | The classic command-line packet analyzer.                   |
-| `tcptraceroute`   | A `traceroute` implementation using TCP packets.            |
-| `telnet`          | A client for the TELNET protocol.                           |
-| `termshark`       | A terminal user interface for `tshark`.                     |
-| `tshark`          | The command-line version of Wireshark.                      |
-| `traceroute`      | Traces the path packets take to a network host.             |
-| `wget`            | A non-interactive network downloader.                       |
-| `whois`           | A client for the WHOIS directory service.                   |
-| `wireguard-tools` | Utilities for the WireGuard VPN protocol.                   |
+**Protocol Analysis**: tcpdump, tshark, termshark, ngrep
+**Traffic Testing**: iperf, iperf3, mtr, fping
+**DNS Tools**: dig, host, nslookup (bind9-utils), dnsutils
+**Network Scanning**: nmap, netcat-openbsd
+**Routing & Firewalls**: bird2, iptables, nftables, ipset, ipvsadm
+**Interface Management**: iproute2 (ip, ss), net-tools (ifconfig, netstat), ethtool, bridge-utils
+**Connection Tracking**: conntrack, iftop
 
-### ⚙️ System & Shell Utilities
+### 🔧 Network Utilities
 
-| Tool             | Description                                                 |
-| ---------------- | ----------------------------------------------------------- |
-| `bash`           | The GNU Bourne-Again SHell.                                 |
-| `btop`           | A modern and feature-rich resource monitor.                 |
-| `ca-certificates`| Common CA certificates for SSL/TLS validation.              |
-| `coreutils`      | The basic file, shell and text manipulation utilities.      |
-| `e2fsprogs`      | Utilities for the ext2, ext3, and ext4 filesystems.         |
-| `fail2ban`       | A tool to ban hosts that cause multiple authentication errors.|
-| `file`           | A utility to determine file type.                           |
-| `fzf`            | A general-purpose command-line fuzzy finder.                |
-| `gdisk`          | A GPT fdisk-like partitioning tool.                         |
-| `git`            | The distributed version control system.                     |
-| `htop`           | An interactive process viewer.                              |
-| `iotop`          | A simple top-like I/O monitor.                              |
-| `jq`             | A lightweight and flexible command-line JSON processor.     |
-| `kitty-terminfo` | Terminfo files for the Kitty terminal emulator.             |
-| `logrotate`      | Rotates, compresses, and mails system logs.                 |
-| `lsof`           | A utility to list open files.                               |
-| `lynx`           | A text-based web browser.                                   |
-| `magic-wormhole` | A tool to get things from one computer to another, safely.  |
-| `ncdu`           | A disk usage analyzer with an ncurses interface.            |
-| `nfs-common`     | NFS support files for client and server.                    |
-| `nmon`           | A performance monitoring tool for Linux.                    |
-| `openssl`        | A robust, commercial-grade, and full-featured toolkit for TLS.|
-| `pipx`           | A tool to install and run Python applications in isolated environments.|
-| `procps`         | Utilities for browsing the `/proc` filesystem.              |
-| `python3-pip`    | The package installer for Python.                           |
-| `rsync`          | A fast, versatile, remote (and local) file-copying tool.    |
-| `screen`         | A full-screen window manager that multiplexes a physical terminal.|
-| `strace`         | A diagnostic, debugging and instructional userspace tracer. |
-| `sudo`           | A tool to execute a command as another user.                |
-| `sysstat`        | A collection of performance monitoring tools (`sar`, `iostat`).|
-| `tmux`           | A terminal multiplexer.                                     |
-| `unzip` / `zip`  | Utilities for compressing and decompressing ZIP archives.   |
-| `util-linux`     | A huge collection of essential Linux utilities.             |
-| `uv`             | An extremely fast Python package installer from Astral.     |
-| `vim`            | A highly configurable text editor.                          |
+**HTTP/HTTPS**: curl, wget, httpie, apache2-utils (ab)
+**Remote Access**: openssh-client, telnet
+**Data Transfer**: socat, rsync, magic-wormhole
+**VPN**: wireguard-tools
+**SMTP Testing**: swaks
+**Other**: traceroute, tcptraceroute, whois, speedtest-cli, dhcping
 
-### 🎨 Shell Enhancements
+### 💻 System & Monitoring Tools
 
-| Tool                      | Description                                                 |
-| ------------------------- | ----------------------------------------------------------- |
-| `oh-my-zsh`               | A delightful, open-source, community-driven framework for managing your Zsh configuration.|
-| `powerlevel10k`           | A fast and flexible Zsh theme with a slick look.            |
-| `zsh-autosuggestions`     | It suggests commands as you type based on history and completions.|
-| `zsh-completions`         | Additional completion definitions for Zsh.                  |
-| `fast-syntax-highlighting`| A feature-rich syntax highlighting plugin for Zsh.          |
+**Process Monitoring**: htop, btop, nmon, top (procps)
+**Resource Analysis**: iotop, sysstat (sar, iostat), strace
+**Disk Tools**: ncdu, lsof, e2fsprogs, gdisk
+**File Operations**: rsync, unzip, zip, file
+**Text Processing**: jq, vim, lynx
 
----
+### 🐍 Development & Scripting
 
-## 🔧 Customization
+**Python**: python3, pip, pipx, uv (fast package manager)
+**Version Control**: git
+**Utilities**: fzf (fuzzy finder), coreutils, util-linux
 
-The shell environment is pre-configured with `.zshrc` and `.p10k.zsh` files. You can easily mount your own configuration files to customize the prompt, aliases, and plugins to your liking.
+### 🎨 Enhanced Shell Experience
 
-**Example:**
+**Zsh Framework**: oh-my-zsh with custom configuration
+**Theme**: powerlevel10k (modern, informative prompt)
+**Plugins**: zsh-autosuggestions, zsh-completions, fast-syntax-highlighting
+**Multiplexers**: tmux, screen
+
+### 🔐 Security & Authentication
+
+**TLS/SSL**: openssl, ca-certificates
+**Access Control**: sudo, fail2ban
+**Storage**: NFS support (nfs-common)
+
+<details>
+<summary>📦 View complete package list</summary>
+
+**Networking**: apache2-utils, bind9-utils, bird2, bridge-utils, conntrack, curl, dhcping, dnsutils, ethtool, fping, httpie, iftop, iperf, iperf3, iproute2, ipset, iptables, iputils-ping, ipvsadm, mtr, netcat-openbsd, net-tools, nftables, ngrep, nmap, openssh-client, socat, speedtest-cli, swaks, tcpdump, tcptraceroute, telnet, termshark, tshark, traceroute, wget, whois, wireguard-tools
+
+**System**: bash, btop, ca-certificates, coreutils, e2fsprogs, fail2ban, file, fzf, gdisk, git, htop, iotop, jq, kitty-terminfo, logrotate, lsof, lynx, magic-wormhole, ncdu, nfs-common, nmon, openssl, pipx, procps, python3-pip, rsync, screen, strace, sudo, sysstat, tmux, unzip, util-linux, uv, vim, zip
+
+**Shell**: oh-my-zsh, powerlevel10k, zsh-autosuggestions, zsh-completions, fast-syntax-highlighting
+
+</details>
+
+## 🎨 Advanced Usage
+
+### Custom Shell Configuration
+
+Mount your own configuration files to customize the environment:
 
 ```bash
-docker run -it --rm -v /path/to/your/.zshrc:/root/.zshrc obeoneorg/netshoot
+# Custom Zsh configuration
+docker run -it --rm \
+  -v ~/.zshrc:/root/.zshrc \
+  -v ~/.p10k.zsh:/root/.p10k.zsh \
+  obeoneorg/netshoot
+
+# Custom aliases and scripts
+docker run -it --rm \
+  -v ~/my-scripts:/scripts \
+  obeoneorg/netshoot
 ```
 
----
+### Kubernetes Deployment as Daemonset
+
+Deploy netshoot on all nodes for cluster-wide troubleshooting:
+
+```yaml
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: netshoot
+spec:
+  selector:
+    matchLabels:
+      app: netshoot
+  template:
+    metadata:
+      labels:
+        app: netshoot
+    spec:
+      hostNetwork: true
+      containers:
+      - name: netshoot
+        image: obeoneorg/netshoot:latest
+        command: ["/bin/sleep", "infinity"]
+        securityContext:
+          privileged: true
+```
+
+### File Transfer with transfer.sh
+
+The included transfer.sh script makes sharing files easy:
+
+```bash
+# Upload a file
+docker run -it --rm -v /path/to/file:/data/file obeoneorg/netshoot \
+  /tools/transfer.sh /data/file
+
+# Download with expiration
+docker run -it --rm obeoneorg/netshoot \
+  /tools/transfer.sh --max-days 7 myfile.txt
+```
+
+### Running as Non-Root (Security)
+
+For production environments, run with reduced privileges:
+
+```bash
+docker run -it --rm \
+  --user 1000:1000 \
+  --cap-drop=ALL \
+  --cap-add=NET_RAW \
+  --cap-add=NET_ADMIN \
+  obeoneorg/netshoot
+```
+
+### Persistent Shell History
+
+Keep your command history between sessions:
+
+```bash
+docker run -it --rm \
+  -v netshoot-history:/root/.zsh_history \
+  obeoneorg/netshoot
+```
 
 ## 🏗️ Building from Source
 
-If you want to build the image yourself, simply clone the repository and use `docker build`.
+### Quick Build
 
 ```bash
 git clone https://github.com/obeone/netshoot.git
@@ -176,24 +284,64 @@ cd netshoot
 docker build -t my-netshoot .
 ```
 
-The `Dockerfile` is structured with multi-stage builds. You can build a specific variant by using the `--target` flag. For example, to build only the `podman` variant:
+### Build Specific Variant
 
 ```bash
+# Build with Docker runtime
+docker build --target docker -t my-netshoot:docker .
+
+# Build with Podman runtime
 docker build --target podman -t my-netshoot:podman .
+
+# Build slim variant
+docker build -f Dockerfile.slim -t my-netshoot:slim .
 ```
 
----
+### Multi-Platform Build
+
+Use the provided build script for official multi-platform builds:
+
+```bash
+# Build all variants for AMD64 and ARM64
+./build.sh
+
+# Build specific type
+./build.sh --type=debian --target=base
+
+# Build without registry cache
+./build.sh --no-cache
+```
+
+See [CLAUDE.md](CLAUDE.md) for detailed build system documentation.
 
 ## 🤝 Contributing
 
-Contributions are welcome! Feel free to open an issue or submit a pull request to suggest new tools or improvements.
+Contributions are welcome! Here's how you can help:
 
----
+- **Report bugs**: Open an issue with details about the problem
+- **Suggest tools**: Propose new utilities that would benefit network troubleshooting
+- **Improve documentation**: Fix typos, add examples, or clarify instructions
+- **Submit pull requests**: Follow conventional commit format for your changes
+
+Check out [CLAUDE.md](CLAUDE.md) for development guidelines and architecture details.
 
 ## 📜 License
 
 This project is licensed under the **MIT License**. See the [LICENSE](LICENSE) file for details.
 
----
+## 🙏 Credits
 
-Made with ❤️ by [Grégoire Compagnon (obeone)](https://github.com/obeone)
+Built with ❤️ by [Grégoire Compagnon (obeone)](https://github.com/obeone)
+
+Special thanks to:
+
+- The Debian Project for the solid foundation
+- Oh My Zsh and Powerlevel10k communities
+- All the maintainers of the included open-source tools
+
+## 📚 Related Projects
+
+- [nicolaka/netshoot](https://github.com/nicolaka/netshoot) - Original inspiration (Alpine-based)
+- [docker/cli](https://github.com/docker/cli) - Docker CLI
+- [containers/podman](https://github.com/containers/podman) - Podman container engine
+- [containerd/nerdctl](https://github.com/containerd/nerdctl) - Docker-compatible CLI for containerd

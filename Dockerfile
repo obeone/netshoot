@@ -6,6 +6,8 @@
 # comprehensive suite of networking and system tools, multiple container runtimes
 # (Docker, Podman, nerdctl), and an enhanced Zsh shell environment with Oh My Zsh.
 #
+# Maintainer: Grégoire Compagnon (obeone) <obeone@obeone.org>
+#
 
 # ==============================================================================
 # Base Stage: Debian Trixie with Essential Tools and Shell Enhancements
@@ -46,7 +48,7 @@ RUN --mount=type=cache,target=/var/cache/apt,id=apt-${TARGETARCH} \
     NETWORKING_TOOLS=(
         apache2-utils
         bind9-utils
-        bird2 
+        bird2
         bridge-utils
         conntrack
         curl
@@ -195,7 +197,7 @@ RUN --mount=type=cache,target=/var/cache/apt,id=apt-${TARGETARCH} \
 
     # Install Docker components
     apt-get update
-    apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+    apt-get install -y --no-install-recommends docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
 EOT
 
 # ==============================================================================

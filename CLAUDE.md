@@ -33,6 +33,7 @@ Use the [build.sh](build.sh) script to build and push images:
 ```
 
 **Available targets for debian type (Dockerfile):**
+
 - `base` - Base image with networking tools (no container runtime)
 - `docker` - Base + Docker CLI and docker-compose
 - `podman` - Base + Podman runtime
@@ -40,11 +41,13 @@ Use the [build.sh](build.sh) script to build and push images:
 - `containerd` - Base + nerdctl full version with containerd
 
 **Available targets for slim type (Dockerfile.slim):**
+
 - `base` - Slimmed-down version with essential tools only
 
 ### Build Configuration
 
 The build script uses:
+
 - **Multi-platform builds**: `linux/amd64,linux/arm64` by default
 - **BuildKit cache mounts**: For faster apt operations and git clones
 - **Registry cache**: Enabled by default for layer caching (`obeoneorg/netshoot-cache`)
@@ -99,6 +102,7 @@ docker run -it --rm --network=host obeoneorg/netshoot
 The build system creates the following tags:
 
 **Debian (full) variants:**
+
 - `latest`, `debian`, `debian-latest` → base stage
 - `docker`, `debian-docker` → docker stage
 - `podman`, `debian-podman` → podman stage
@@ -106,6 +110,7 @@ The build system creates the following tags:
 - `containerd`, `debian-containerd` → containerd stage
 
 **Slim variants:**
+
 - `slim`, `slim-latest` → base stage (reduced toolset)
 
 ## Development Notes
@@ -113,6 +118,7 @@ The build system creates the following tags:
 ### Adding New Tools
 
 When adding tools to the Dockerfile:
+
 1. Add package name to appropriate array (`NETWORKING_TOOLS` or `SYSTEM_TOOLS`) in the base stage
 2. Keep arrays alphabetically sorted for maintainability
 3. Consider if tool should also be in slim variant (update Dockerfile.slim accordingly)
@@ -121,6 +127,7 @@ When adding tools to the Dockerfile:
 ### Modifying Build Targets
 
 To add a new variant:
+
 1. Create new stage in Dockerfile that extends `FROM base AS newvariant`
 2. Add target to `TARGETS["debian"]` in build.sh: `newvariant:debian-newvariant,newvariant`
 3. Update README.md with new variant description
@@ -128,6 +135,7 @@ To add a new variant:
 ### Cache Management
 
 The build uses two types of caching:
+
 - **Local BuildKit cache**: For apt packages and git repositories (per-architecture)
 - **Registry cache**: For sharing layers between builds (`--cache-from/--cache-to`)
 

@@ -6,17 +6,7 @@
 # Docker image. It supports building specific targets from the Dockerfile,
 # managing cache, and tagging images appropriately.
 #
-# Usage:
-#   ./build.sh [OPTIONS]
-#
-# Options:
-#   --type=<type> | -y <type>         Build a specific type (debian or slim).
-#                                     If not specified, all types are built.
-#   --target=<target> | -t <target>   Build a specific target (e.g., base, docker).
-#                                     If not specified, all targets for the selected type are built.
-#   --builder=<builder> | -b <builder> Specify the Docker buildx builder to use.
-#                                     Defaults to "multiplatform".
-#   --no-cache                        Disable the use of registry cache.
+# Maintainer: Grégoire Compagnon (obeone) <obeone@obeone.org>
 #
 
 set -e
@@ -39,42 +29,56 @@ PLATFORMS="linux/amd64,linux/arm64"
 # ------------------------------------------------------------------------------
 # Argument Parsing
 # ------------------------------------------------------------------------------
+
+# Parse command line arguments.
+#
+# Usage:
+#   ./build.sh [OPTIONS]
+#
+# Options:
+#   --type=<type> | -y <type>         Build a specific type (debian or slim).
+#                                     If not specified, all types are built.
+#   --target=<target> | -t <target>   Build a specific target (e.g., base, docker).
+#                                     If not specified, all targets for the selected type are built.
+#   --builder=<builder> | -b <builder> Specify the Docker buildx builder to use.
+#                                     Defaults to "cloud-obeoneorg-cloud".
+#   --no-cache                        Disable the use of registry cache.
 while [[ $# -gt 0 ]]; do
-  case $1 in
-    --target=*)
-      TARGET_ARG="${1#*=}"
-      shift
-      ;;
-    -t|--target)
-      TARGET_ARG="$2"
-      shift 2
-      ;;
-    --type=*)
-      TYPE_ARG="${1#*=}"
-      shift
-      ;;
-    -y|--type)
-      TYPE_ARG="$2"
-      shift 2
-      ;;
-    --builder=*)
-      BUILDER="${1#*=}"
-      shift
-      ;;
-    -b|--builder)
-      BUILDER="$2"
-      shift 2
-      ;;
-    --no-cache)
-      USE_CACHE=false
-      shift
-      ;;
-    *)
-      echo "Unknown option: $1"
-      echo "Usage: $0 [--type=<type>] [--target=<target>] [--no-cache] [--builder=<builder>]"
-      exit 1
-      ;;
-  esac
+    case $1 in
+        --target=*)
+            TARGET_ARG="${1#*=}"
+            shift
+            ;;
+        -t | --target)
+            TARGET_ARG="$2"
+            shift 2
+            ;;
+        --type=*)
+            TYPE_ARG="${1#*=}"
+            shift
+            ;;
+        -y | --type)
+            TYPE_ARG="$2"
+            shift 2
+            ;;
+        --builder=*)
+            BUILDER="${1#*=}"
+            shift
+            ;;
+        -b | --builder)
+            BUILDER="$2"
+            shift 2
+            ;;
+        --no-cache)
+            USE_CACHE=false
+            shift
+            ;;
+        *)
+            echo "Unknown option: $1"
+            echo "Usage: $0 [--type=<type>] [--target=<target>] [--no-cache] [--builder=<builder>]"
+            exit 1
+            ;;
+    esac
 done
 
 # ------------------------------------------------------------------------------
@@ -130,7 +134,7 @@ build_target() {
     local dockerfile="$2"
     IFS=':' read -r target tags <<< "$entry"
     IFS=',' read -ra tags_arr <<< "$tags"
-    
+
     local tag_args=()
     for tag in "${tags_arr[@]}"; do
         tag_args+=(-t "${IMAGE_NAME}:$tag")
@@ -147,10 +151,13 @@ build_target() {
         --target "$target"
 }
 
-# ------------------------------------------------------------------------------
-# Main Execution
-# ------------------------------------------------------------------------------
-
+# build_type
+#
+# Builds all (or a specific) target for a given build type (debian or slim).
+#
+# Arguments:
+#   $1 - The build type (debian or slim).
+#
 build_type() {
     local type=$1
     local dockerfile=""
@@ -167,7 +174,7 @@ build_type() {
 
     if [[ -n "$TARGET_ARG" ]]; then
         # Build a specific target if provided.
-        target_found=false
+        local target_found=false
         for entry in "${type_targets[@]}"; do
             IFS=':' read -r target _ <<< "$entry"
             if [[ "$target" == "$TARGET_ARG" ]]; then
@@ -194,6 +201,10 @@ build_type() {
         done
     fi
 }
+
+# ------------------------------------------------------------------------------
+# Main Execution
+# ------------------------------------------------------------------------------
 
 if [[ -n "$TYPE_ARG" ]]; then
     build_type "$TYPE_ARG"

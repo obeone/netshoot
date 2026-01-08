@@ -17,7 +17,7 @@ zmodload zsh/zprof
 # requires user input should go above this block.
 # ==============================================================================
 if [[ -r "${XDG_CACHE_HOME:-$HOME/.cache}/p10k-instant-prompt-${(%):-%n}.zsh" ]]; then
-  source "${XDG_CACHE_HOME:-$HOME/.cache}/p10k-instant-prompt-${(%):-%n}.zsh"
+    source "${XDG_CACHE_HOME:-$HOME/.cache}/p10k-instant-prompt-${(%):-%n}.zsh"
 fi
 
 # ==============================================================================
@@ -28,11 +28,11 @@ fi
 # or sensitive settings.
 # ==============================================================================
 if [[ -f "$HOME/.zshrc.local" ]]; then
-  source "$HOME/.zshrc.local"
+    source "$HOME/.zshrc.local"
 fi
 
 if [[ -f "$HOME/.zshrc.secrets" ]]; then
-  source "$HOME/.zshrc.secrets"
+    source "$HOME/.zshrc.secrets"
 fi
 
 # ==============================================================================
@@ -48,9 +48,9 @@ export PATH="$PATH:$HOME/.local/go_workspace/bin/"
 
 # Set the preferred editor. Use a terminal-based editor for SSH sessions.
 if [[ -n $SSH_CONNECTION ]]; then
-  export EDITOR='vim'
+    export EDITOR='vim'
 else
-  export EDITOR='code-as-editor'
+    export EDITOR='code-as-editor'
 fi
 
 # Disable mouse support in Vim.
@@ -101,38 +101,38 @@ HIST_STAMPS="dd/mm/yyyy"
 
 # Configure web search engines for the `web-search` plugin.
 ZSH_WEB_SEARCH_ENGINES=(
-  searng 'https://searxng.containers.obeone.org/search?q='
+    searng 'https://searxng.containers.obeone.org/search?q='
 )
 
 # Define the list of Oh My Zsh plugins to load.
 plugins=(
-  git
-  kubectl
-  command-not-found
-  helm
-  copyfile
-  web-search
-  git-flow
-  python
-  pip
-  colorize
-  git-commit
-  zsh-autosuggestions
-  zsh-navigation-tools
-  sudo
-  brew
-  colored-man-pages
-  dirhistory
-  grc
-  gnu-utils
-  zsh-completions
-  fast-syntax-highlighting
-  fzf
+    git
+    kubectl
+    command-not-found
+    helm
+    copyfile
+    web-search
+    git-flow
+    python
+    pip
+    colorize
+    git-commit
+    zsh-autosuggestions
+    zsh-navigation-tools
+    sudo
+    brew
+    colored-man-pages
+    dirhistory
+    grc
+    gnu-utils
+    zsh-completions
+    fast-syntax-highlighting
+    fzf
 )
 
 # Add the `bgnotify` plugin if on macOS or a DBUS session is available.
 if [[ "$OSTYPE" == darwin* || -e "$DBUS_SESSION_BUS_ADDRESS" ]]; then
-  plugins+=(bgnotify)
+    plugins+=(bgnotify)
 fi
 
 # Source the Oh My Zsh script to load it.
@@ -148,54 +148,61 @@ source "$ZSH/oh-my-zsh.sh"
 # These aliases provide shortcuts for the most common container engine (Docker,
 # nerdctl, or Podman), abstracting away the specific command.
 
-# Function to get logs with a default line count.
+# _container_logs_with_default
+#
+# Helper function to get logs with a default line count.
+#
+# Arguments:
+#   $1 - The container engine command (docker, podman, etc.)
+#   $* - Other arguments to pass to the logs command.
+#
 _container_logs_with_default() {
-  local engine="$1"
-  shift
-  local args=("$@")
-  if [[ ! " ${args[@]} " =~ " -n " ]]; then
-    args+=("-n" "100")
-  fi
-  "$engine" logs "${args[@]}"
+    local engine="$1"
+    shift
+    local args=("$@")
+    if [[ ! " ${args[@]} " =~ " -n " ]]; then
+        args+=("-n" "100")
+    fi
+    "$engine" logs "${args[@]}"
 }
 
-if command -v docker &> /dev/null; then
-  alias drit='docker run -ti --rm'
-  alias diel='docker exec -it $(docker ps -ql)'
-  alias dc='docker compose'
-  alias dl='_container_logs_with_default docker'
-  compdef _docker dl=docker
-elif command -v nerdctl &> /dev/null; then
-  alias docker='nerdctl'
-  alias drit='nerdctl run -ti --rm'
-  alias diel='nerdctl exec -it $(nerdctl ps -ql)'
-  alias dc='nerdctl compose'
-  alias dl='_container_logs_with_default nerdctl'
-  compdef _docker dl=nerdctl
-elif command -v podman &> /dev/null; then
-  alias docker='podman'
-  alias drit='podman run -ti --rm'
-  alias diel='podman exec -it $(podman ps -ql)'
-  alias dc='podman compose'
-  alias dl='_container_logs_with_default podman'
-  compdef _docker dl=podman
+if command -v docker &>/dev/null; then
+    alias drit='docker run -ti --rm'
+    alias diel='docker exec -it $(docker ps -ql)'
+    alias dc='docker compose'
+    alias dl='_container_logs_with_default docker'
+    compdef _docker dl=docker
+elif command -v nerdctl &>/dev/null; then
+    alias docker='nerdctl'
+    alias drit='nerdctl run -ti --rm'
+    alias diel='nerdctl exec -it $(nerdctl ps -ql)'
+    alias dc='nerdctl compose'
+    alias dl='_container_logs_with_default nerdctl'
+    compdef _docker dl=nerdctl
+elif command -v podman &>/dev/null; then
+    alias docker='podman'
+    alias drit='podman run -ti --rm'
+    alias diel='podman exec -it $(podman ps -ql)'
+    alias dc='podman compose'
+    alias dl='_container_logs_with_default podman'
+    compdef _docker dl=podman
 fi
 
 # --- Kitty Terminal ---
 if [[ "$TERM" == "xterm-kitty" || "$TERM" == "kitty" ]]; then
-  alias s='kitty +kitten ssh --kitten share_connections=yes'
-  compdef _ssh s
-  alias hg='kitty +kitten hyperlinked_grep'
-  compdef _rg hg
-  alias cb='kitty +kitten clipboard'
-  alias d='kitty +kitten diff'
-  alias icat='kitty +kitten icat'
-  alias transfer='kitty +kitten transfer'
-  alias edit='kitten edit-in-kitty --type background'
-  alias notify='kitten notify'
-  export EDITOR="kitten edit-in-kitty --type background"
+    alias s='kitty +kitten ssh --kitten share_connections=yes'
+    compdef _ssh s
+    alias hg='kitty +kitten hyperlinked_grep'
+    compdef _rg hg
+    alias cb='kitty +kitten clipboard'
+    alias d='kitty +kitten diff'
+    alias icat='kitty +kitten icat'
+    alias transfer='kitty +kitten transfer'
+    alias edit='kitten edit-in-kitty --type background'
+    alias notify='kitten notify'
+    export EDITOR="kitten edit-in-kitty --type background"
 elif [[ "$WARP_IS_LOCAL_SHELL_SESSION" == "1" ]]; then
-  alias s="ssh"
+    alias s="ssh"
 fi
 
 # --- Python Virtual Environments ---
@@ -219,21 +226,27 @@ alias docker-build-run='docker build . -t $(basename "$PWD" | tr " " "_") && doc
 # Define custom functions for more complex tasks.
 # ==============================================================================
 
+# cat
+#
 # Colorize `cat` output if `colorize` is installed.
-if command -v colorize_cat > /dev/null 2>&1 && colorize_check_requirements; then
-  function cat() {
-    if [[ -t 1 ]]; then
-      colorize_cat "$@"
-    else
-      /usr/bin/env cat "$@"
-    fi
-  }
+#
+if command -v colorize_cat >/dev/null 2>&1 && colorize_check_requirements; then
+    function cat() {
+        if [[ -t 1 ]]; then
+            colorize_cat "$@"
+        else
+            /usr/bin/env cat "$@"
+        fi
+    }
 fi
 
+# sjs
+#
 # Restart a systemd service and follow its logs.
+#
 sjs() {
-  sudo systemctl restart "$1" &
-  sudo journalctl -fu "$1"
+    sudo systemctl restart "$1" &
+    sudo journalctl -fu "$1"
 }
 
 # ==============================================================================
@@ -244,59 +257,59 @@ sjs() {
 
 # --- Conda ---
 if command -v conda >/dev/null 2>&1; then
-  eval "$(conda "shell.$(basename "${SHELL}")" hook)"
+    eval "$(conda "shell.$(basename "${SHELL}")" hook)"
 fi
 
 # --- Neovim ---
 if command -v nvim >/dev/null 2>&1; then
-  alias vi=nvim
+    alias vi=nvim
 fi
 
 # --- Atuin History ---
 if [ -z "$HIST_IGNORE_ALL" ]; then
-  if command -v atuin >/dev/null 2>&1; then
-    eval "$(atuin init zsh --disable-up-arrow)"
-    export ZSH_AUTOSUGGEST_STRATEGY=(atuin completion)
-  fi
-  # Alias to start a new shell with history disabled.
-  alias histoff='env HIST_IGNORE_ALL=true zsh'
+    if command -v atuin >/dev/null 2>&1; then
+        eval "$(atuin init zsh --disable-up-arrow)"
+        export ZSH_AUTOSUGGEST_STRATEGY=(atuin completion)
+    fi
+    # Alias to start a new shell with history disabled.
+    alias histoff='env HIST_IGNORE_ALL=true zsh'
 else
-  # Disable history saving.
-  export HISTFILE=/dev/null
-  # Alias to exit the history-disabled shell.
-  alias histon='exit'
+    # Disable history saving.
+    export HISTFILE=/dev/null
+    # Alias to exit the history-disabled shell.
+    alias histon='exit'
 fi
 
 # --- Shell GPT Integration (Ctrl+L) ---
 _sgpt_zsh() {
-  if [[ -n "$BUFFER" ]]; then
-    local _sgpt_prev_cmd=$BUFFER
-    print -P "\e[90m# $_sgpt_prev_cmd\e[0m"
-    BUFFER+="⌛"
-    zle -I && zle redisplay
-    BUFFER=$(sgpt --shell --no-interaction <<< "$_sgpt_prev_cmd")
-    zle end-of-line
-  fi
+    if [[ -n "$BUFFER" ]]; then
+        local _sgpt_prev_cmd=$BUFFER
+        print -P "\e[90m# $_sgpt_prev_cmd\e[0m"
+        BUFFER+="⌛"
+        zle -I && zle redisplay
+        BUFFER=$(sgpt --shell --no-interaction <<< "$_sgpt_prev_cmd")
+        zle end-of-line
+    fi
 }
 zle -N _sgpt_zsh
 bindkey '^l' _sgpt_zsh
 
 # --- AiChat Integration (Alt+E) ---
 _aichat_zsh() {
-  if [[ -n "$BUFFER" ]]; then
-    local _old=$BUFFER
-    BUFFER+="⌛"
-    zle -I && zle redisplay
-    BUFFER=$(aichat -e "$_old" 2>> /tmp/aichat_debug.log)
-    zle end-of-line
-  fi
+    if [[ -n "$BUFFER" ]]; then
+        local _old=$BUFFER
+        BUFFER+="⌛"
+        zle -I && zle redisplay
+        BUFFER=$(aichat -e "$_old" 2>>/tmp/aichat_debug.log)
+        zle end-of-line
+    fi
 }
 zle -N _aichat_zsh
 bindkey '\ee' _aichat_zsh
 
 # --- Shell GPT Docker Fallback ---
 if ! command -v sgpt >/dev/null 2>&1; then
-  alias sgpt='docker run --rm -ti \
+    alias sgpt='docker run --rm -ti \
     --env OPENAI_API_KEY=$OPENAI_API_KEY \
     --env OS_NAME=$(uname -s) \
     --env SHELL_NAME=$(echo $SHELL) \
@@ -322,7 +335,7 @@ ZSH_AUTOSUGGEST_IGNORE_WIDGETS+=(bracketed-paste)
 
 # Ensure TERM is set correctly for Kitty.
 if [[ "$TERM" == "xterm" ]]; then
-  export TERM=xterm-kitty
+    export TERM=xterm-kitty
 fi
 
 # Fig post block. Keep at the very bottom of this file.

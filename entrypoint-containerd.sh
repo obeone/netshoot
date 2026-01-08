@@ -7,6 +7,8 @@
 # container, allowing the user to run a shell or other tools while containerd
 # is running.
 #
+# Maintainer: Grégoire Compagnon (obeone) <obeone@obeone.org>
+#
 
 set -e
 
