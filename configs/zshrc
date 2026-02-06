@@ -6,9 +6,6 @@
 # Powerlevel10k, plugins, aliases, and custom functions.
 #
 
-# Profile Zsh startup time for performance analysis.
-zmodload zsh/zprof
-
 # ==============================================================================
 # Powerlevel10k Instant Prompt
 # ==============================================================================
@@ -18,6 +15,34 @@ zmodload zsh/zprof
 # ==============================================================================
 if [[ -r "${XDG_CACHE_HOME:-$HOME/.cache}/p10k-instant-prompt-${(%):-%n}.zsh" ]]; then
     source "${XDG_CACHE_HOME:-$HOME/.cache}/p10k-instant-prompt-${(%):-%n}.zsh"
+fi
+
+# Profile Zsh startup time for performance analysis.
+zmodload zsh/zprof
+
+# ------------------------------------------------------------------------------
+# Optional startup debug logging (opt-in)
+# ------------------------------------------------------------------------------
+# This is intentionally file-only logging (no stdout/stderr) so it won't interfere
+# with Powerlevel10k instant prompt.
+#
+# Enable with:
+#   NETSHOOT_ZSH_DEBUG=1 zsh -i
+#
+if [[ -n "${NETSHOOT_ZSH_DEBUG:-}" ]]; then
+    {
+        print -r -- "---- netshoot zshrc start ----"
+        print -r -- "date: $(date -Is 2>/dev/null || date)"
+        print -r -- "zsh_version: ${ZSH_VERSION}"
+        print -r -- "interactive: $([[ -o interactive ]] && print -r -- yes || print -r -- no)"
+        print -r -- "stdin_is_tty: $([[ -t 0 ]] && print -r -- yes || print -r -- no)"
+        print -r -- "stdout_is_tty: $([[ -t 1 ]] && print -r -- yes || print -r -- no)"
+        print -r -- "HOME: ${HOME}"
+        print -r -- "ZDOTDIR: ${ZDOTDIR:-<unset>}"
+        print -r -- "PWD: ${PWD}"
+        print -r -- "p10k_file: ${HOME}/.p10k.zsh"
+        print -r -- "p10k_file_exists: $([[ -f "${HOME}/.p10k.zsh" ]] && print -r -- yes || print -r -- no)"
+    } >>/tmp/netshoot-zshrc.debug.log 2>&1
 fi
 
 # ==============================================================================
@@ -157,6 +182,14 @@ fi
 
 # Source the Oh My Zsh script to load it.
 source "$ZSH/oh-my-zsh.sh"
+
+if [[ -n "${NETSHOOT_ZSH_DEBUG:-}" ]]; then
+    {
+        print -r -- "after_oh_my_zsh: yes"
+        print -r -- "p10k_function_defined: $(( $+functions[p10k] ))"
+        print -r -- "ZSH_THEME: ${ZSH_THEME:-<unset>}"
+    } >>/tmp/netshoot-zshrc.debug.log 2>&1
+fi
 
 # ==============================================================================
 # Aliases
@@ -301,31 +334,39 @@ else
 fi
 
 # --- Shell GPT Integration (Ctrl+L) ---
-_sgpt_zsh() {
-    if [[ -n "$BUFFER" ]]; then
-        local _sgpt_prev_cmd=$BUFFER
-        print -P "\e[90m# $_sgpt_prev_cmd\e[0m"
-        BUFFER+="⌛"
-        zle -I && zle redisplay
-        BUFFER=$(sgpt --shell --no-interaction <<< "$_sgpt_prev_cmd")
-        zle end-of-line
-    fi
-}
-zle -N _sgpt_zsh
-bindkey '^l' _sgpt_zsh
+# NOTE:
+# ZLE widgets require an interactive shell with a TTY. Without a TTY (e.g.
+# `zsh -i -c ...`, CI, or `docker exec` without `-t`) ZLE isn't available and
+# these commands would raise errors.
+if [[ -o interactive ]] && [[ -t 0 ]] && [[ -t 1 ]]; then
+    _sgpt_zsh() {
+        if [[ -n "$BUFFER" ]]; then
+            local _sgpt_prev_cmd=$BUFFER
+            print -P "\e[90m# $_sgpt_prev_cmd\e[0m"
+            BUFFER+="⌛"
+            zle -I && zle redisplay
+            BUFFER=$(sgpt --shell --no-interaction <<< "$_sgpt_prev_cmd")
+            zle end-of-line
+        fi
+    }
+    zle -N _sgpt_zsh
+    bindkey '^l' _sgpt_zsh
+fi
 
 # --- AiChat Integration (Alt+E) ---
-_aichat_zsh() {
-    if [[ -n "$BUFFER" ]]; then
-        local _old=$BUFFER
-        BUFFER+="⌛"
-        zle -I && zle redisplay
-        BUFFER=$(aichat -e "$_old" 2>>/tmp/aichat_debug.log)
-        zle end-of-line
-    fi
-}
-zle -N _aichat_zsh
-bindkey '\ee' _aichat_zsh
+if [[ -o interactive ]] && [[ -t 0 ]] && [[ -t 1 ]]; then
+    _aichat_zsh() {
+        if [[ -n "$BUFFER" ]]; then
+            local _old=$BUFFER
+            BUFFER+="⌛"
+            zle -I && zle redisplay
+            BUFFER=$(aichat -e "$_old" 2>>/tmp/aichat_debug.log)
+            zle end-of-line
+        fi
+    }
+    zle -N _aichat_zsh
+    bindkey '\ee' _aichat_zsh
+fi
 
 # --- Shell GPT Docker Fallback ---
 if ! command -v sgpt >/dev/null 2>&1; then
@@ -344,19 +385,50 @@ fi
 # ==============================================================================
 # Finalization
 # ==============================================================================
-# Source Powerlevel10k and other final configuration steps.
+# Source Final configuration steps.
 # ==============================================================================
 
-# Source the Powerlevel10k theme configuration.
-[[ ! -f ~/.p10k.zsh ]] || source ~/.p10k.zsh
-
-# Fix for bracketed paste issues with zsh-autosuggest.
-ZSH_AUTOSUGGEST_IGNORE_WIDGETS+=(bracketed-paste)
 
 # Ensure TERM is set correctly for Kitty.
 if [[ "$TERM" == "xterm" ]]; then
     export TERM=xterm-kitty
 fi
 
+# Source the Powerlevel10k configuration once.
+#
+# This is intentionally placed near the end so that everything above (PATH,
+# plugins, aliases, etc.) is initialized first.
+#
+# NOTE:
+# When Zsh is forced to be interactive without a TTY (e.g. `zsh -i -c`),
+# Powerlevel10k/gitstatus can fail to initialize due to missing job control.
+# In that case we disable the configuration wizard to avoid noisy warnings.
+if [[ -o interactive ]] && [[ -f "${HOME}/.p10k.zsh" ]]; then
+    if [[ -t 0 ]] && [[ -t 1 ]]; then
+        if [[ -n "${NETSHOOT_ZSH_DEBUG:-}" ]]; then
+            print -r -- "sourcing: ${HOME}/.p10k.zsh" >>/tmp/netshoot-zshrc.debug.log 2>&1
+        fi
+
+        source "${HOME}/.p10k.zsh"
+
+        if [[ -n "${NETSHOOT_ZSH_DEBUG:-}" ]]; then
+            __netshoot_rc=$?
+            print -r -- "source_rc: ${__netshoot_rc}" >>/tmp/netshoot-zshrc.debug.log 2>&1
+            print -r -- "POWERLEVEL9K_CONFIG_FILE: ${POWERLEVEL9K_CONFIG_FILE:-<unset>}" >>/tmp/netshoot-zshrc.debug.log 2>&1
+            unset __netshoot_rc
+        fi
+    else
+        # Suppress P10k's wizard warning in non-TTY interactive shells.
+        export POWERLEVEL9K_DISABLE_CONFIGURATION_WIZARD=true
+    fi
+fi
+
+# Fix for bracketed paste issues with zsh-autosuggest.
+ZSH_AUTOSUGGEST_IGNORE_WIDGETS+=(bracketed-paste)
+
 # Fig post block. Keep at the very bottom of this file.
 [[ -f "$HOME/.fig/shell/zshrc.post.zsh" ]] && builtin source "$HOME/.fig/shell/zshrc.post.zsh"
+
+if [[ -n "${NETSHOOT_ZSH_DEBUG:-}" ]]; then
+    print -r -- "---- netshoot zshrc end ----" >>/tmp/netshoot-zshrc.debug.log 2>&1
+fi

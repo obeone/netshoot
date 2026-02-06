@@ -4,13 +4,25 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Netshoot is a Docker-based network troubleshooting toolkit built on Debian 13 Trixie (stable). It provides multiple variants (base, docker, podman, nerdctl, containerd) through a multi-stage Dockerfile architecture, each tailored for specific container runtime needs.
+Netshoot is a Docker-based network troubleshooting toolkit built on Debian 13 Trixie (stable). It provides multiple variants (base, docker, podman, nerdctl, containerd) through a multi-stage Dockerfile architecture, each tailored for specific container runtime needs. A slim variant with a reduced toolset is also available.
 
-## Build System
+## Build Commands
 
-### Building Images
+### Local development build (single platform, no push)
 
-Use the [build.sh](build.sh) script to build and push images:
+```bash
+# Build base variant locally
+docker build -t netshoot:local .
+
+# Build a specific variant
+docker build --target docker -t netshoot:docker-local .
+docker build --target podman -t netshoot:podman-local .
+
+# Build slim variant
+docker build -f Dockerfile.slim -t netshoot:slim-local .
+```
+
+### Production build (multi-platform, pushes to registry)
 
 ```bash
 # Build all types and targets
@@ -23,7 +35,6 @@ Use the [build.sh](build.sh) script to build and push images:
 # Build specific target for a type
 ./build.sh --type=debian --target=base
 ./build.sh --type=debian --target=docker
-./build.sh --type=debian --target=podman
 
 # Disable registry cache
 ./build.sh --no-cache
@@ -32,74 +43,87 @@ Use the [build.sh](build.sh) script to build and push images:
 ./build.sh --builder=my-builder
 ```
 
-**Available targets for debian type (Dockerfile):**
+**Note**: `build.sh` always pushes (`--push`). It requires a configured buildx builder (default: `cloud-obeoneorg-cloud`) and targets `linux/amd64,linux/arm64`.
 
-- `base` - Base image with networking tools (no container runtime)
-- `docker` - Base + Docker CLI and docker-compose
-- `podman` - Base + Podman runtime
-- `nerdctl` - Base + nerdctl client only
-- `containerd` - Base + nerdctl full version with containerd
+### Testing images
 
-**Available targets for slim type (Dockerfile.slim):**
-
-- `base` - Slimmed-down version with essential tools only
-
-### Build Configuration
-
-The build script uses:
-
-- **Multi-platform builds**: `linux/amd64,linux/arm64` by default
-- **BuildKit cache mounts**: For faster apt operations and git clones
-- **Registry cache**: Enabled by default for layer caching (`obeoneorg/netshoot-cache`)
-- **Docker buildx**: Requires a configured builder (default: `cloud-obeoneorg-cloud`)
+```bash
+docker run -it --rm netshoot:local
+docker run -it --rm --network=host netshoot:local
+docker run -it --rm --network=container:<target> netshoot:local
+```
 
 ## Architecture
 
 ### Multi-Stage Dockerfile Structure
 
-The [Dockerfile](Dockerfile) uses multi-stage builds:
+All variant stages extend from `base`. The stage graph is flat (no chaining between variants):
 
-1. **`base` stage**: Foundation stage that installs all networking and system tools, sets up Zsh with Oh My Zsh, Powerlevel10k theme, and plugins
-2. **`docker` stage**: Extends base with Docker CLI from official Docker repository
-3. **`podman` stage**: Extends base with Podman and fuse-overlayfs
-4. **`nerdctl` stage**: Extends base with nerdctl client (downloads from GitHub releases)
-5. **`containerd` stage**: Extends base with full nerdctl package including containerd (uses custom entrypoint)
+```
+debian:trixie → base → docker
+                     → podman
+                     → nerdctl
+                     → containerd
+```
 
-The [Dockerfile.slim](Dockerfile.slim) provides a single `base` stage with a reduced tool set for smaller image size.
+- **`base`**: Installs all networking/system tools, Zsh with Oh My Zsh + Powerlevel10k, plugins, and helper scripts
+- **`docker`**: Adds Docker CE + buildx + compose from Docker's official apt repo
+- **`podman`**: Adds Podman + fuse-overlayfs from Debian repos
+- **`nerdctl`**: Downloads nerdctl client binary from GitHub releases (with SHA256 verification)
+- **`containerd`**: Downloads nerdctl-full from GitHub releases (includes containerd); uses a custom entrypoint that starts containerd before exec
+
+`Dockerfile.slim` is a separate file with a single `base` stage and a reduced package set.
+
+### Tool Installation Patterns
+
+The Dockerfile uses three distinct installation methods. When adding a tool, choose the appropriate one:
+
+1. **Apt packages** (most tools): Add to `CORE_TOOLS`, `SYSTEM_TOOLS`, or `NETWORKING_TOOLS` arrays in the base stage. Arrays must stay alphabetically sorted.
+2. **Custom apt repository** (e.g., Ookla speedtest): Add GPG key to `/etc/apt/keyrings/`, add sources list entry, then `apt-get install`. See the speedtest block in Dockerfile.
+3. **GitHub releases binary** (e.g., grpcurl, nerdctl): Query GitHub API for latest tag, map `TARGETARCH` to the project's naming convention, download tarball, extract binary to `/usr/local/bin`. Use `--mount=type=cache` on a dedicated `/tmp/<tool>` directory.
+
+Additionally, `uv` is copied directly from `ghcr.io/astral-sh/uv:latest`, and `check-tls` is installed via `uv tool install`.
 
 ### Key Design Patterns
 
-- **BuildKit cache optimization**: All stages use `--mount=type=cache` for apt and download caches to speed up rebuilds
-- **Architecture detection**: Uses `TARGETARCH` build arg to download correct binaries for each platform
-- **Checksum verification**: External downloads (nerdctl) verify SHA256 checksums
-- **Layer reuse**: Uses `COPY --link` for better layer sharing across variants
+- **BuildKit cache mounts**: All `apt-get` and download steps use `--mount=type=cache` with architecture-specific IDs (`id=apt-${TARGETARCH}`) and `sharing=locked` for parallel build safety
+- **Architecture detection**: `TARGETARCH` build arg is declared per-stage (`ARG TARGETARCH`) and mapped to project-specific arch names in `case` blocks
+- **Checksum verification**: nerdctl downloads verify SHA256SUMS; grpcurl does not (only version verification)
+- **Layer optimization**: `COPY --link` for config files enables better layer sharing across variants
 
 ### Configuration Files
 
-- [configs/zshrc](configs/zshrc) - Zsh configuration with Oh My Zsh setup
-- [configs/p10k.zsh](configs/p10k.zsh) - Powerlevel10k theme configuration
-- [configs/podman-storage.conf](configs/podman-storage.conf) - Podman storage configuration for rootless operation
-- [tools/transfer.sh](tools/transfer.sh) - Script for quick file transfers
-- [entrypoint-containerd.sh](entrypoint-containerd.sh) - Entrypoint for containerd variant to start containerd daemon
+- `configs/zshrc` — Zsh configuration with Oh My Zsh setup
+- `configs/p10k.zsh` — Powerlevel10k theme configuration
+- `configs/podman-storage.conf` — Podman storage config for rootless operation
+- `tools/transfer.sh` — File transfer helper script (installed to `/usr/local/bin/transfer.sh`)
+- `entrypoint-containerd.sh` — Entrypoint for containerd variant (starts containerd daemon, then exec's the user command)
 
-## Testing Images
+## CI/CD
 
-Run a container interactively:
+GitHub Actions workflow: `.github/workflows/build-and-publish.yaml`
 
-```bash
-# Test base image
-docker run -it --rm obeoneorg/netshoot:latest
+### Published registries
 
-# Test docker variant
-docker run -it --rm obeoneorg/netshoot:docker
+- **GHCR**: `ghcr.io/obeone/netshoot`
+- **Docker Hub**: `docker.io/obeoneorg/netshoot`
 
-# Test with host network
-docker run -it --rm --network=host obeoneorg/netshoot
-```
+### Trigger behavior
+
+- **Push to `main`**: Publishes floating tags (latest, docker, podman, etc.) to both registries. Signs images with cosign (OIDC keyless).
+- **Push tag `v*.*.*`**: Publishes SemVer tags per variant (e.g., `1.2.3`, `1.2.3-docker`, `1.2-docker`, `1-docker`) to both registries. Signs images.
+- **Pull requests** (`pull_request_target`): Publishes `pr-<number>` tags to GHCR only. Only builds if PR author is trusted or PR is approved by an org OWNER/MEMBER.
+
+### Required secrets
+
+- `DOCKERHUB_USERNAME`, `DOCKERHUB_TOKEN`
+- `GITHUB_TOKEN` (built-in) for GHCR
+
+### CI vs local build caching
+
+The CI workflow uses `type=gha` (GitHub Actions cache). The `build.sh` script uses `type=registry` (registry-based cache at `obeoneorg/netshoot-cache`). These are independent cache stores.
 
 ## Image Variants and Tags
-
-The build system creates the following tags:
 
 **Debian (full) variants:**
 
@@ -117,26 +141,20 @@ The build system creates the following tags:
 
 ### Adding New Tools
 
-When adding tools to the Dockerfile:
+1. Choose the correct installation method (see "Tool Installation Patterns" above)
+2. For apt packages: add to the appropriate sorted array (`CORE_TOOLS`, `SYSTEM_TOOLS`, or `NETWORKING_TOOLS`)
+3. Consider if the tool should also be in the slim variant (`Dockerfile.slim`)
+4. Document the tool in the README.md tools section
 
-1. Add package name to appropriate array (`NETWORKING_TOOLS` or `SYSTEM_TOOLS`) in the base stage
-2. Keep arrays alphabetically sorted for maintainability
-3. Consider if tool should also be in slim variant (update Dockerfile.slim accordingly)
-4. Document the tool in the README.md tools table
+### Adding a New Variant
 
-### Modifying Build Targets
-
-To add a new variant:
-
-1. Create new stage in Dockerfile that extends `FROM base AS newvariant`
-2. Add target to `TARGETS["debian"]` in build.sh: `newvariant:debian-newvariant,newvariant`
-3. Update README.md with new variant description
+1. Create new stage in Dockerfile: `FROM base AS newvariant`
+2. Add target to `TARGETS["debian"]` in `build.sh`: `newvariant:debian-newvariant,newvariant`
+3. Add matrix entry in `.github/workflows/build-and-publish.yaml` with variant, dockerfile, target, floating_tags, and semver_suffix
+4. Update README.md with new variant description
 
 ### Cache Management
 
-The build uses two types of caching:
-
-- **Local BuildKit cache**: For apt packages and git repositories (per-architecture)
-- **Registry cache**: For sharing layers between builds (`--cache-from/--cache-to`)
-
-To clear local cache, remove the buildx builder cache or use `--no-cache`.
+- **Local BuildKit cache**: Per-architecture apt and download caches. Clear with `docker builder prune` or use `--no-cache` flag.
+- **Registry cache** (`build.sh` only): Per-build-tag cache refs at `obeoneorg/netshoot-cache:<tag>`. Disabled with `--no-cache`.
+- **GHA cache** (CI only): Managed automatically by GitHub Actions.

@@ -346,6 +346,26 @@ Contributions are welcome! Here's how you can help:
 
 Check out [CLAUDE.md](CLAUDE.md) for development guidelines and architecture details.
 
+## CI/CD
+
+This repository publishes Docker images via GitHub Actions.
+
+### Published Registries
+
+- GHCR: `ghcr.io/obeone/netshoot`
+- Docker Hub: `obeoneorg/netshoot`
+
+### Required Secrets
+
+- `DOCKERHUB_USERNAME`
+- `DOCKERHUB_TOKEN`
+
+Notes:
+
+- The built-in `GITHUB_TOKEN` is used to authenticate to GHCR.
+- Pull requests publish `pr-<number>` tags to GHCR only, and only if the PR author
+  is trusted or the PR is approved by an organization member.
+
 ## 📜 License
 
 This project is licensed under the **MIT License**. See the [LICENSE](LICENSE)
