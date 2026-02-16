@@ -87,6 +87,7 @@ RUN --mount=type=cache,target=/var/cache/apt,id=apt-${TARGETARCH},sharing=locked
         rsync
         strace
         sysstat
+        thefuck
         tmux
     )
 
