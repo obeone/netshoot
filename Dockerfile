@@ -87,6 +87,7 @@ RUN --mount=type=cache,target=/var/cache/apt,id=apt-${TARGETARCH},sharing=locked
         rsync
         strace
         sysstat
+        thefuck
         tmux
     )
 
@@ -225,6 +226,8 @@ RUN --mount=type=cache,target=/root/.cache <<EOT
         ${ZSH_CUSTOM}/themes/powerlevel10k
 
     # Install gitstatus for Powerlevel10k
+    # GITSTATUS_CACHE_DIR must point outside the cache mount (/root/.cache)
+    # so the binary is persisted in the image layer.
     case "$TARGETARCH" in
         amd64)   PLATFORM="x86_64" ;;
         386)     PLATFORM="i686" ;;
@@ -233,7 +236,8 @@ RUN --mount=type=cache,target=/root/.cache <<EOT
         ppc64le) PLATFORM="ppc64le" ;;
         *)       PLATFORM="$TARGETARCH" ;;
     esac
-    ${ZSH_CUSTOM}/themes/powerlevel10k/gitstatus/install -s linux -m ${PLATFORM}
+    GITSTATUS_CACHE_DIR=${ZSH_CUSTOM}/themes/powerlevel10k/gitstatus/usrbin \
+        ${ZSH_CUSTOM}/themes/powerlevel10k/gitstatus/install -s linux -m ${PLATFORM}
 EOT
 
 # Copy configuration files and scripts using --link for better layer reuse.

@@ -1,0 +1,279 @@
+# This workflow builds and pushes Netshoot Docker images to GHCR and Docker Hub.
+#
+# Triggers:
+# - Push to 'main' branch: publishes floating tags (latest, docker, podman, etc.)
+# - Push of tags 'v*.*.*': publishes SemVer tags per variant (e.g. 1.2.3-docker)
+# - Pull Requests (via pull_request_target): pushes PR tags to GHCR only,
+#   but only if PR author is trusted or the PR is approved by an org OWNER/MEMBER.
+#
+# Features:
+# - Multi-platform build (linux/amd64, linux/arm64)
+# - Multi-registry push (GHCR & Docker Hub)
+# - GitHub Actions cache (type=gha)
+# - Cosign OIDC signing for main/tag pushes (official images only)
+
+name: Build and Publish Docker
+
+on:
+  push:
+    branches:
+      - main
+    tags:
+      - 'v*.*.*'
+  pull_request_target:
+    types: [opened, synchronize, reopened]
+
+jobs:
+  build-push-sign:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+      id-token: write # Required for OIDC signing
+      pull-requests: read # Required for PR review queries
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # Debian (full) variants (Dockerfile)
+          - variant: base
+            dockerfile: Dockerfile
+            target: base
+            floating_tags: latest,debian,debian-latest
+            semver_suffix: ''
+          - variant: docker
+            dockerfile: Dockerfile
+            target: docker
+            floating_tags: docker,debian-docker
+            semver_suffix: -docker
+          - variant: podman
+            dockerfile: Dockerfile
+            target: podman
+            floating_tags: podman,debian-podman
+            semver_suffix: -podman
+          - variant: nerdctl
+            dockerfile: Dockerfile
+            target: nerdctl
+            floating_tags: nerdctl,debian-nerdctl
+            semver_suffix: -nerdctl
+          - variant: containerd
+            dockerfile: Dockerfile
+            target: containerd
+            floating_tags: containerd,debian-containerd
+            semver_suffix: -containerd
+          # Slim variant (Dockerfile.slim)
+          - variant: slim
+            dockerfile: Dockerfile.slim
+            target: base
+            floating_tags: slim,slim-latest
+            semver_suffix: -slim
+
+    steps:
+      # --- PR Security Gatekeeper (Start) ---
+      - name: Security gatekeeper
+        id: gatekeeper
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+
+          if [[ "${{ github.event_name }}" == "push" ]]; then
+            echo "Event is push, proceeding with build/push/sign."
+            echo "run_build=true" >> "$GITHUB_OUTPUT"
+            echo "push_ghcr=true" >> "$GITHUB_OUTPUT"
+            echo "push_dockerhub=true" >> "$GITHUB_OUTPUT"
+            echo "sign_images=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          # pull_request_target
+          PR_NUMBER="${{ github.event.pull_request.number }}"
+          PR_AUTHOR="${{ github.event.pull_request.user.login }}"
+
+          echo "PR number: ${PR_NUMBER}"
+          echo "PR author: ${PR_AUTHOR}"
+
+          # Define a list of trusted authors.
+          trusted_authors=("obeone")
+          trusted="false"
+          for author in "${trusted_authors[@]}"; do
+            if [[ "$author" == "$PR_AUTHOR" ]]; then
+              trusted="true"
+              break
+            fi
+          done
+          echo "PR author trusted: ${trusted}"
+
+          approved="false"
+          approvals=$(gh api "repos/${{ github.repository }}/pulls/${PR_NUMBER}/reviews" \
+            --jq '.[] | select(.state=="APPROVED" and (.author_association=="OWNER" or .author_association=="MEMBER")) | .user.login' || true)
+
+          if [[ -n "${approvals}" ]]; then
+            echo "PR approved by org member(s): ${approvals}"
+            approved="true"
+          else
+            echo "PR not approved by an org OWNER/MEMBER."
+          fi
+
+          if [[ "$trusted" == "true" || "$approved" == "true" ]]; then
+            echo "PR meets security criteria, proceeding with build/push to GHCR only."
+            echo "run_build=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "PR does not meet security criteria, skipping build."
+            echo "run_build=false" >> "$GITHUB_OUTPUT"
+          fi
+
+          echo "push_ghcr=true" >> "$GITHUB_OUTPUT"
+          echo "push_dockerhub=false" >> "$GITHUB_OUTPUT"
+          echo "sign_images=false" >> "$GITHUB_OUTPUT"
+          echo "pr_number=${PR_NUMBER}" >> "$GITHUB_OUTPUT"
+          echo "pr_author=${PR_AUTHOR}" >> "$GITHUB_OUTPUT"
+      # --- PR Security Gatekeeper (End) ---
+
+      - name: Checkout (push)
+        if: steps.gatekeeper.outputs.run_build == 'true' && github.event_name == 'push'
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Checkout (pull_request_target)
+        if: steps.gatekeeper.outputs.run_build == 'true' && github.event_name == 'pull_request_target'
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          repository: ${{ github.event.pull_request.head.repo.full_name }}
+          ref: ${{ github.event.pull_request.head.sha }}
+
+      - name: Set up QEMU
+        if: steps.gatekeeper.outputs.run_build == 'true'
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        if: steps.gatekeeper.outputs.run_build == 'true'
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GitHub Container Registry
+        if: steps.gatekeeper.outputs.run_build == 'true'
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Log in to Docker Hub
+        if: steps.gatekeeper.outputs.run_build == 'true' && steps.gatekeeper.outputs.push_dockerhub == 'true'
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Compute tags (per variant)
+        if: steps.gatekeeper.outputs.run_build == 'true'
+        id: tags
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          IMAGE_GHCR="ghcr.io/obeone/netshoot"
+          IMAGE_DOCKERHUB="docker.io/obeoneorg/netshoot"
+
+          EVENT_NAME="${{ github.event_name }}"
+          REF="${{ github.ref }}"
+          SUFFIX="${{ matrix.semver_suffix }}"
+
+          tags=()
+          images=()
+
+          if [[ "$EVENT_NAME" == "push" ]]; then
+            images+=("$IMAGE_GHCR" "$IMAGE_DOCKERHUB")
+
+            if [[ "$REF" == "refs/heads/main" ]]; then
+              IFS=',' read -ra floats <<< "${{ matrix.floating_tags }}"
+              for t in "${floats[@]}"; do
+                tags+=("$t")
+              done
+            elif [[ "$REF" == refs/tags/v* ]]; then
+              version="${REF#refs/tags/v}"
+              IFS='.' read -r major minor patch <<< "$version"
+              if [[ -z "${major}" || -z "${minor}" || -z "${patch}" ]]; then
+                echo "Invalid SemVer tag: $REF" >&2
+                exit 1
+              fi
+
+              tags+=("${version}${SUFFIX}")
+              tags+=("${major}.${minor}${SUFFIX}")
+              tags+=("${major}${SUFFIX}")
+            else
+              echo "Unsupported ref for push event: $REF" >&2
+              exit 1
+            fi
+          elif [[ "$EVENT_NAME" == "pull_request_target" ]]; then
+            images+=("$IMAGE_GHCR")
+            pr_number="${{ github.event.pull_request.number }}"
+            tags+=("pr-${pr_number}${SUFFIX}")
+          else
+            echo "Unsupported event: $EVENT_NAME" >&2
+            exit 1
+          fi
+
+          full_tags=()
+          for image in "${images[@]}"; do
+            for t in "${tags[@]}"; do
+              full_tags+=("${image}:${t}")
+            done
+          done
+
+          {
+            echo 'tags<<EOF'
+            printf '%s\n' "${full_tags[@]}"
+            echo 'EOF'
+          } >> "$GITHUB_OUTPUT"
+
+          {
+            echo 'base_images<<EOF'
+            printf '%s\n' "${images[@]}"
+            echo 'EOF'
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Build and push
+        if: steps.gatekeeper.outputs.run_build == 'true'
+        id: build
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./${{ matrix.dockerfile }}
+          target: ${{ matrix.target }}
+          push: true
+          platforms: linux/amd64,linux/arm64
+          tags: ${{ steps.tags.outputs.tags }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Set up cosign
+        if: steps.gatekeeper.outputs.sign_images == 'true'
+        uses: sigstore/cosign-installer@v3
+
+      - name: Sign images with cosign (official images only)
+        if: steps.gatekeeper.outputs.sign_images == 'true'
+        env:
+          COSIGN_EXPERIMENTAL: true
+          DIGEST: ${{ steps.build.outputs.digest }}
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          if [[ -z "${DIGEST}" ]]; then
+            echo "Digest is empty, aborting signing." >&2
+            exit 1
+          fi
+
+          while IFS= read -r image; do
+            if [[ -z "$image" ]]; then
+              continue
+            fi
+            echo "Signing ${image}@${DIGEST}"
+            cosign sign --yes "${image}@${DIGEST}"
+          done <<< "${{ steps.tags.outputs.base_images }}"
+
