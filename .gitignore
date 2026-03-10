@@ -1,0 +1,17 @@
+# OS artifacts
+.DS_Store
+
+# Editor / IDE
+*.swp
+*.swo
+*~
+.history/
+
+# Claude Code
+.claude/
+
+# Build infrastructure (personal)
+depot.json
+
+# Worktrees
+.worktrees/
