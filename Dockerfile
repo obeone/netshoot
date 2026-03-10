@@ -168,77 +168,15 @@ RUN --mount=type=cache,target=/root/.cache \
     uv tool install check-tls
 
 # Install grpcurl from GitHub releases.
-RUN --mount=type=cache,target=/tmp/grpcurl <<EOT
-    set -eux
+COPY scripts/install-grpcurl.sh /tmp/
+RUN --mount=type=cache,target=/tmp/grpcurl \
+    /tmp/install-grpcurl.sh
 
-    # Map TARGETARCH to grpcurl architecture naming
-    case "$TARGETARCH" in
-        amd64)   ARCH="x86_64" ;;
-        arm64)   ARCH="arm64" ;;
-        *)       echo "Unsupported architecture: $TARGETARCH" >&2 && exit 1 ;;
-    esac
-
-    # Fetch the latest release tag from the GitHub API
-    TAG=$(curl -fsSL https://api.github.com/repos/fullstorydev/grpcurl/releases/latest | jq -r .tag_name)
-
-    FILE="grpcurl_${TAG#v}_linux_${ARCH}.tar.gz"
-    URL="https://github.com/fullstorydev/grpcurl/releases/download/${TAG}/${FILE}"
-    ARCHIVE="/tmp/grpcurl/${FILE}"
-
-    # Download the archive if not cached
-    if [ ! -f "$ARCHIVE" ]; then
-        echo "Downloading grpcurl ${TAG} from $URL"
-        curl -fsSL "$URL" -o "$ARCHIVE"
-    fi
-
-    # Extract and install grpcurl binary
-    tar -xzf "$ARCHIVE" -C /usr/local/bin grpcurl
-    chmod +x /usr/local/bin/grpcurl
-
-    # Verify installation
-    grpcurl --version
-EOT
-
-# Install Oh My Zsh, essential plugins, and the Powerlevel10k theme.
-# This enhances the shell with auto-suggestions, syntax highlighting, and more.
+# Install Oh My Zsh, plugins, Powerlevel10k theme, and gitstatus binary.
 # A cache mount is used to speed up git clone operations during repeated builds.
-RUN --mount=type=cache,target=/root/.cache <<EOT
-    set -eux
-
-    # Install Oh My Zsh non-interactively
-    curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh | \
-        bash -s -- --unattended
-
-    # Define the custom plugins and themes directory
-    ZSH_CUSTOM=/root/.oh-my-zsh/custom
-
-    # Clone Zsh plugins and Powerlevel10k theme (depth 1 for speed)
-    git clone --depth 1 https://github.com/zsh-users/zsh-autosuggestions \
-        ${ZSH_CUSTOM}/plugins/zsh-autosuggestions
-    
-    git clone --depth 1 https://github.com/zsh-users/zsh-completions \
-        ${ZSH_CUSTOM}/plugins/zsh-completions
-    
-    git clone --depth 1 https://github.com/zdharma-continuum/fast-syntax-highlighting \
-        ${ZSH_CUSTOM}/plugins/fast-syntax-highlighting
-    
-    git clone --depth 1 https://github.com/romkatv/powerlevel10k.git \
-        ${ZSH_CUSTOM}/themes/powerlevel10k
-
-    # Install gitstatus for Powerlevel10k
-    # GITSTATUS_CACHE_DIR must point outside the cache mount (/root/.cache)
-    # so the binary is persisted in the image layer.
-    case "$TARGETARCH" in
-        amd64)   PLATFORM="x86_64" ;;
-        386)     PLATFORM="i686" ;;
-        arm64)   PLATFORM="aarch64" ;;
-        arm)     PLATFORM="arm" ;;
-        ppc64le) PLATFORM="ppc64le" ;;
-        *)       PLATFORM="$TARGETARCH" ;;
-    esac
-    GITSTATUS_CACHE_DIR=${ZSH_CUSTOM}/themes/powerlevel10k/gitstatus/usrbin \
-        ${ZSH_CUSTOM}/themes/powerlevel10k/gitstatus/install -s linux -m ${PLATFORM}
-EOT
+COPY scripts/install-omz.sh /tmp/
+RUN --mount=type=cache,target=/root/.cache \
+    /tmp/install-omz.sh
 
 # Copy configuration files and scripts using --link for better layer reuse.
 COPY --link configs/zshrc /root/.zshrc
@@ -317,45 +255,10 @@ ARG TARGETARCH
 LABEL org.opencontainers.image.title="netshoot-nerdctl"
 LABEL org.opencontainers.image.description="Netshoot with nerdctl (client only)"
 
-# Download and install nerdctl.
-# The script verifies the download with a SHA256 checksum.
-RUN --mount=type=cache,target=/tmp/nerdctl <<EOT
-    set -eux
-
-    # Detect architecture for GitHub release URL
-    case "$TARGETARCH" in
-        amd64) ARCH=amd64 ;;
-        arm64) ARCH=arm64 ;;
-        arm)   ARCH=arm-v7 ;;
-        *) echo "Unsupported architecture: $TARGETARCH" >&2 && exit 1 ;;
-    esac
-
-    # Fetch the latest release tag from the GitHub API
-    TAG=$(curl -fsSL https://api.github.com/repos/containerd/nerdctl/releases/latest | \
-        jq -r .tag_name)
-
-    FILE="nerdctl-${TAG#v}-linux-${ARCH}.tar.gz"
-    URL="https://github.com/containerd/nerdctl/releases/download/${TAG}/${FILE}"
-    CHECKSUM_URL="https://github.com/containerd/nerdctl/releases/download/${TAG}/SHA256SUMS"
-    ARCHIVE="/tmp/nerdctl/$FILE"
-
-    # Download and verify the archive if not cached
-    if [ ! -f "$ARCHIVE" ]; then
-        echo "Downloading nerdctl ${TAG} from $URL"
-        curl -fsSL "$URL" -o "$ARCHIVE"
-        curl -fsSL "$CHECKSUM_URL" -o "/tmp/nerdctl/SHA256SUMS"
-    fi
-
-    # Verify checksum - ensure the file exists in SHA256SUMS
-    if ! grep -q "$FILE" /tmp/nerdctl/SHA256SUMS; then
-        echo "ERROR: Checksum for $FILE not found in SHA256SUMS" >&2
-        exit 1
-    fi
-    cd /tmp/nerdctl && grep "$FILE" SHA256SUMS | sha256sum -c -
-
-    # Extract the archive
-    tar Cxzvf /usr/local "$ARCHIVE"
-EOT
+# Download and install nerdctl client with SHA256 verification.
+COPY scripts/install-nerdctl.sh /tmp/
+RUN --mount=type=cache,target=/tmp/nerdctl \
+    /tmp/install-nerdctl.sh client
 
 # ==============================================================================
 # Containerd/nerdctl Stage: Installs nerdctl (full version with containerd)
@@ -367,44 +270,10 @@ ARG TARGETARCH
 LABEL org.opencontainers.image.title="netshoot-containerd"
 LABEL org.opencontainers.image.description="Netshoot with nerdctl full (containerd included)"
 
-# Download and install nerdctl full.
-RUN --mount=type=cache,target=/tmp/nerdctl <<EOT
-    set -eux
-
-    # Detect architecture for GitHub release URL
-    case "$TARGETARCH" in
-        amd64) ARCH=amd64 ;;
-        arm64) ARCH=arm64 ;;
-        arm)   ARCH=arm-v7 ;;
-        *) echo "Unsupported architecture: $TARGETARCH" >&2 && exit 1 ;;
-    esac
-
-    # Fetch the latest release tag from the GitHub API
-    TAG=$(curl -fsSL https://api.github.com/repos/containerd/nerdctl/releases/latest | \
-        jq -r .tag_name)
-
-    FILE="nerdctl-full-${TAG#v}-linux-${ARCH}.tar.gz"
-    URL="https://github.com/containerd/nerdctl/releases/download/${TAG}/${FILE}"
-    CHECKSUM_URL="https://github.com/containerd/nerdctl/releases/download/${TAG}/SHA256SUMS"
-    ARCHIVE="/tmp/nerdctl/$FILE"
-
-    # Download and verify the archive if not cached
-    if [ ! -f "$ARCHIVE" ]; then
-        echo "Downloading nerdctl-full ${TAG} from $URL"
-        curl -fsSL "$URL" -o "$ARCHIVE"
-        curl -fsSL "$CHECKSUM_URL" -o "/tmp/nerdctl/SHA256SUMS"
-    fi
-
-    # Verify checksum - ensure the file exists in SHA256SUMS
-    if ! grep -q "$FILE" /tmp/nerdctl/SHA256SUMS; then
-        echo "ERROR: Checksum for $FILE not found in SHA256SUMS" >&2
-        exit 1
-    fi
-    cd /tmp/nerdctl && grep "$FILE" SHA256SUMS | sha256sum -c -
-
-    # Extract the archive
-    tar Cxzvf /usr/local "$ARCHIVE"
-EOT
+# Download and install nerdctl full (includes containerd) with SHA256 verification.
+COPY scripts/install-nerdctl.sh /tmp/
+RUN --mount=type=cache,target=/tmp/nerdctl \
+    /tmp/install-nerdctl.sh full
 
 # Copy the entrypoint script for containerd.
 COPY --link --chmod=755 entrypoint-containerd.sh /entrypoint.sh
