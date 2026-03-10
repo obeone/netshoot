@@ -1,0 +1,103 @@
+# Composite action: compute Docker image tags for a given variant.
+#
+# Outputs:
+#   tags        — newline-separated list of fully qualified image:tag strings
+#   base_images — newline-separated list of registry image names (for cosign)
+
+name: Compute Docker Tags
+description: Compute image tags for a variant based on event type and ref
+
+inputs:
+  variant:
+    description: Variant name (e.g. base, docker, slim)
+    required: true
+  floating_tags:
+    description: Comma-separated floating tags (e.g. latest,debian,debian-latest)
+    required: true
+  semver_suffix:
+    description: Suffix for SemVer tags (e.g. -docker, empty for base)
+    required: true
+  push_dockerhub:
+    description: Whether to include Docker Hub tags (true/false)
+    required: true
+
+outputs:
+  tags:
+    description: Newline-separated fully qualified tags
+    value: ${{ steps.compute.outputs.tags }}
+  base_images:
+    description: Newline-separated registry image names
+    value: ${{ steps.compute.outputs.base_images }}
+
+runs:
+  using: composite
+  steps:
+    - name: Compute tags
+      id: compute
+      shell: bash
+      env:
+        EVENT_NAME: ${{ github.event_name }}
+        GIT_REF: ${{ github.ref }}
+        PR_NUMBER: ${{ github.event.pull_request.number }}
+        VARIANT: ${{ inputs.variant }}
+        FLOATING_TAGS: ${{ inputs.floating_tags }}
+        SUFFIX: ${{ inputs.semver_suffix }}
+        PUSH_DOCKERHUB: ${{ inputs.push_dockerhub }}
+      run: |
+        set -euo pipefail
+
+        IMAGE_GHCR="ghcr.io/obeone/netshoot"
+        IMAGE_DOCKERHUB="docker.io/obeoneorg/netshoot"
+
+        tags=()
+        images=()
+
+        if [[ "$EVENT_NAME" == "push" ]]; then
+          images+=("$IMAGE_GHCR")
+          [[ "$PUSH_DOCKERHUB" == "true" ]] && images+=("$IMAGE_DOCKERHUB")
+
+          if [[ "$GIT_REF" == "refs/heads/main" ]]; then
+            IFS=',' read -ra floats <<< "$FLOATING_TAGS"
+            for t in "${floats[@]}"; do
+              tags+=("$t")
+            done
+          elif [[ "$GIT_REF" == refs/tags/v* ]]; then
+            version="${GIT_REF#refs/tags/v}"
+            IFS='.' read -r major minor patch <<< "$version"
+            if [[ -z "${major}" || -z "${minor}" || -z "${patch}" ]]; then
+              echo "Invalid SemVer tag: $GIT_REF" >&2
+              exit 1
+            fi
+            tags+=("${version}${SUFFIX}")
+            tags+=("${major}.${minor}${SUFFIX}")
+            tags+=("${major}${SUFFIX}")
+          else
+            echo "Unsupported ref for push event: $GIT_REF" >&2
+            exit 1
+          fi
+        elif [[ "$EVENT_NAME" == "pull_request_target" ]]; then
+          images+=("$IMAGE_GHCR")
+          tags+=("pr-${PR_NUMBER}${SUFFIX}")
+        else
+          echo "Unsupported event: $EVENT_NAME" >&2
+          exit 1
+        fi
+
+        full_tags=()
+        for image in "${images[@]}"; do
+          for t in "${tags[@]}"; do
+            full_tags+=("${image}:${t}")
+          done
+        done
+
+        {
+          echo 'tags<<EOF'
+          printf '%s\n' "${full_tags[@]}"
+          echo 'EOF'
+        } >> "$GITHUB_OUTPUT"
+
+        {
+          echo 'base_images<<EOF'
+          printf '%s\n' "${images[@]}"
+          echo 'EOF'
+        } >> "$GITHUB_OUTPUT"
