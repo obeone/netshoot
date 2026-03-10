@@ -80,16 +80,17 @@ The Dockerfile uses three distinct installation methods. When adding a tool, cho
 
 1. **Apt packages** (most tools): Add to `CORE_TOOLS`, `SYSTEM_TOOLS`, or `NETWORKING_TOOLS` arrays in the base stage. Arrays must stay alphabetically sorted.
 2. **Custom apt repository** (e.g., Ookla speedtest): Add GPG key to `/etc/apt/keyrings/`, add sources list entry, then `apt-get install`. See the speedtest block in Dockerfile.
-3. **GitHub releases binary** (e.g., grpcurl, nerdctl): Query GitHub API for latest tag, map `TARGETARCH` to the project's naming convention, download tarball, extract binary to `/usr/local/bin`. Use `--mount=type=cache` on a dedicated `/tmp/<tool>` directory.
+3. **GitHub releases binary** (e.g., grpcurl, nerdctl): Create a script in `scripts/` that queries GitHub API for the latest tag, maps `TARGETARCH` to the project's naming convention, downloads and extracts the binary. The Dockerfile COPYs the script and runs it with a `--mount=type=cache` on a dedicated `/tmp/<tool>` directory. See `scripts/install-grpcurl.sh` and `scripts/install-nerdctl.sh` for examples.
 
 Additionally, `uv` is copied directly from `ghcr.io/astral-sh/uv:latest`, and `check-tls` is installed via `uv tool install`.
 
 ### Key Design Patterns
 
-- **BuildKit cache mounts**: All `apt-get` and download steps use `--mount=type=cache` with architecture-specific IDs (`id=apt-${TARGETARCH}`) and `sharing=locked` for parallel build safety
+- **BuildKit cache mounts**: All `apt-get` and download steps use `--mount=type=cache` with architecture-specific IDs (`id=apt-${TARGETARCH}`) and `sharing=locked` for parallel build safety.
 - **Architecture detection**: `TARGETARCH` build arg is declared per-stage (`ARG TARGETARCH`) and mapped to project-specific arch names in `case` blocks
 - **Checksum verification**: nerdctl downloads verify SHA256SUMS; grpcurl does not (only version verification)
 - **Layer optimization**: `COPY --link` for config files enables better layer sharing across variants
+- **gitstatus binary persistence**: The Powerlevel10k gitstatus install uses `GITSTATUS_CACHE_DIR` pointed to a path *outside* the `/root/.cache` cache mount. Without this, the compiled binary would live only in the cache mount and be absent from the final image layer.
 
 ### Configuration Files
 
@@ -98,6 +99,14 @@ Additionally, `uv` is copied directly from `ghcr.io/astral-sh/uv:latest`, and `c
 - `configs/podman-storage.conf` — Podman storage config for rootless operation
 - `tools/transfer.sh` — File transfer helper script (installed to `/usr/local/bin/transfer.sh`)
 - `entrypoint-containerd.sh` — Entrypoint for containerd variant (starts containerd daemon, then exec's the user command)
+
+### Installation Scripts
+
+Reusable installation scripts live in `scripts/`. Each script uses `#!/usr/bin/env bash` with `set -eux` and expects `TARGETARCH` as an environment variable (set automatically by Docker BuildKit).
+
+- `scripts/install-omz.sh` — Oh My Zsh + plugins + Powerlevel10k + gitstatus (shared by both Dockerfiles)
+- `scripts/install-nerdctl.sh` — nerdctl download with SHA256 verification; accepts `client` or `full` argument
+- `scripts/install-grpcurl.sh` — grpcurl from GitHub releases
 
 ## CI/CD
 
@@ -136,6 +145,12 @@ The CI workflow uses `type=gha` (GitHub Actions cache). The `build.sh` script us
 **Slim variants:**
 
 - `slim`, `slim-latest` → base stage (reduced toolset)
+
+## Testing and Linting
+
+This project has no automated tests or linters. Validation is done by building the Docker image and running it interactively. There is no `make`, `npm`, or test runner to invoke.
+
+All shell scripts (`build.sh`, `entrypoint-containerd.sh`, `tools/transfer.sh`, `scripts/*.sh`) use `bash`.
 
 ## Development Notes
 
