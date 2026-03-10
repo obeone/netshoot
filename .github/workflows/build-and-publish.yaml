@@ -39,6 +39,7 @@ jobs:
       run_build: ${{ steps.check.outputs.run_build }}
       push_dockerhub: ${{ steps.check.outputs.push_dockerhub }}
       sign_images: ${{ steps.check.outputs.sign_images }}
+      has_dockerhub_secrets: ${{ steps.secrets.outputs.has_dockerhub_secrets }}
     steps:
       - name: Security gatekeeper
         id: check
@@ -85,6 +86,19 @@ jobs:
 
           echo "push_dockerhub=false" >> "$GITHUB_OUTPUT"
           echo "sign_images=false"    >> "$GITHUB_OUTPUT"
+
+      - name: Check Docker Hub credentials availability
+        id: secrets
+        env:
+          DOCKERHUB_USERNAME: ${{ vars.DOCKERHUB_USERNAME }}
+          DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
+        run: |
+          if [[ -n "$DOCKERHUB_USERNAME" && -n "$DOCKERHUB_TOKEN" ]]; then
+            echo "has_dockerhub_secrets=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "Docker Hub credentials not configured, skipping Docker Hub push."
+            echo "has_dockerhub_secrets=false" >> "$GITHUB_OUTPUT"
+          fi
 
   # ---------------------------------------------------------------------------
   # Build base images (base + slim) — these have no upstream dependencies
@@ -139,10 +153,10 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Log in to Docker Hub
-        if: needs.gatekeeper.outputs.push_dockerhub == 'true'
+        if: needs.gatekeeper.outputs.push_dockerhub == 'true' && needs.gatekeeper.outputs.has_dockerhub_secrets == 'true'
         uses: docker/login-action@v3
         with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          username: ${{ vars.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
       - name: Compute tags
@@ -152,7 +166,7 @@ jobs:
           variant: ${{ matrix.variant }}
           floating_tags: ${{ matrix.floating_tags }}
           semver_suffix: ${{ matrix.semver_suffix }}
-          push_dockerhub: ${{ needs.gatekeeper.outputs.push_dockerhub }}
+          push_dockerhub: ${{ needs.gatekeeper.outputs.push_dockerhub == 'true' && needs.gatekeeper.outputs.has_dockerhub_secrets == 'true' }}
 
       - name: Build and push
         id: build
@@ -247,10 +261,10 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Log in to Docker Hub
-        if: needs.gatekeeper.outputs.push_dockerhub == 'true'
+        if: needs.gatekeeper.outputs.push_dockerhub == 'true' && needs.gatekeeper.outputs.has_dockerhub_secrets == 'true'
         uses: docker/login-action@v3
         with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          username: ${{ vars.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
       - name: Compute tags
@@ -260,7 +274,7 @@ jobs:
           variant: ${{ matrix.variant }}
           floating_tags: ${{ matrix.floating_tags }}
           semver_suffix: ${{ matrix.semver_suffix }}
-          push_dockerhub: ${{ needs.gatekeeper.outputs.push_dockerhub }}
+          push_dockerhub: ${{ needs.gatekeeper.outputs.push_dockerhub == 'true' && needs.gatekeeper.outputs.has_dockerhub_secrets == 'true' }}
 
       - name: Build and push
         id: build
