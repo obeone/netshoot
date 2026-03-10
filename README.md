@@ -28,7 +28,7 @@ network diagnostics in containerized environments.
   auto-suggestions, and syntax highlighting
 - **🔀 Multiple Variants**: Choose from base, Docker, Podman, nerdctl, or
   containerd variants
-- **🐍 Python Ready**: Includes Python 3, pipx, and uv for scripting and automation
+- **🐍 Python Ready**: Includes Python 3, pip, and uv for scripting and automation
 - **📦 Multi-Platform**: Supports both AMD64 and ARM64 architectures
 - **🔒 Secure Base**: Built on Debian 13 Trixie stable with regular updates
 
@@ -170,10 +170,11 @@ ethtool, bridge-utils
 **Disk Tools**: ncdu, lsof
 **File Operations**: rsync, unzip, zip, file
 **Text Processing**: jq, vim
+**Command Correction**: thefuck
 
 ### 🐍 Development & Scripting
 
-**Python**: python3, pip, pipx, uv (fast package manager)
+**Python**: python3, pip, uv (fast package manager)
 **Version Control**: git
 **API Testing**: grpcurl (gRPC)
 **Utilities**: fzf (fuzzy finder), coreutils, util-linux
@@ -204,9 +205,9 @@ wireguard-tools
 
 **System**: bash, btop, ca-certificates, check-tls, coreutils, dstat, file,
 fzf, git, grpcurl, htop, iotop, jq, kitty-terminfo, lsof,
-magic-wormhole, ncdu, nfs-common, openssl, pipx, procps, python3-pip,
-rsync, strace, sudo, sysstat, tmux, unzip, util-linux, uv, vim, zip,
-zsh
+magic-wormhole, ncdu, nfs-common, openssl, procps, python3-pip,
+rsync, strace, sudo, sysstat, thefuck, tmux, unzip, util-linux, uv,
+vim, zip, zsh
 
 **Shell**: oh-my-zsh, powerlevel10k, zsh-autosuggestions, zsh-completions, fast-syntax-highlighting
 
@@ -265,11 +266,11 @@ The included transfer.sh script makes sharing files easy:
 ```bash
 # Upload a file
 docker run -it --rm -v /path/to/file:/data/file obeoneorg/netshoot \
-  /tools/transfer.sh /data/file
+  transfer.sh /data/file
 
 # Download with expiration
 docker run -it --rm obeoneorg/netshoot \
-  /tools/transfer.sh --max-days 7 myfile.txt
+  transfer.sh --max-days 7 myfile.txt
 ```
 
 ### Running as Non-Root (Security)

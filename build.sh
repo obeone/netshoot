@@ -18,13 +18,9 @@ TARGET_ARG=""
 TYPE_ARG=""
 USE_CACHE=true
 BUILDER="cloud-obeoneorg-cloud"
-# BUILDER="multiplatform"
 IMAGE_NAME="obeoneorg/netshoot"
-# IMAGE_NAME="harbor.obeone.cloud/public/netshoot"
 CACHE_IMAGE="obeoneorg/netshoot-cache"
-# CACHE_IMAGE="build.registry-cache.obeone.org/public/netshoot"
 PLATFORMS="linux/amd64,linux/arm64"
-# PLATFORMS="linux/amd64,linux/arm64,linux/386"
 
 # ------------------------------------------------------------------------------
 # Argument Parsing
