@@ -108,9 +108,41 @@ Reusable installation scripts live in `scripts/`. Each script uses `#!/usr/bin/e
 - `scripts/install-nerdctl.sh` — nerdctl download with SHA256 verification; accepts `client` or `full` argument
 - `scripts/install-grpcurl.sh` — grpcurl from GitHub releases
 
+## Versioning
+
+This project uses [release-please](https://github.com/googleapis/release-please) for automated semantic versioning based on conventional commits.
+
+### How it works
+
+1. Every push to `main` triggers the `release-please` workflow
+2. release-please analyzes commits since the last release and creates/updates a "Release PR" with a computed version bump and changelog
+3. When the Release PR is merged, release-please creates a git tag (`vX.Y.Z`) and a GitHub Release
+4. The existing build-and-publish workflow triggers on the new tag and publishes SemVer-tagged Docker images
+
+### Version bump policy
+
+| Commit type | Effect | Example |
+|---|---|---|
+| `feat` | **minor** bump | New tool, new image variant |
+| `fix`, `perf` | **patch** bump | Bug fix, performance improvement |
+| `docs`, `ci`, `chore`, `style`, `refactor`, `build`, `test` | changelog only (no bump) | Documentation, CI, maintenance |
+| `BREAKING CHANGE` footer or `!` after type (e.g., `feat!:`) | **major** bump | Base image change, tool removal, entrypoint change |
+
+### Configuration files
+
+- `release-please-config.json` — release-please settings (release type, changelog sections)
+- `.release-please-manifest.json` — tracks current version (updated automatically by release-please)
+
+### Creating a release
+
+Do not create tags manually. Merge the release-please PR on GitHub to trigger a release. The PR title and body show the computed version and changelog before merging.
+
 ## CI/CD
 
-GitHub Actions workflow: `.github/workflows/build-and-publish.yaml`
+GitHub Actions workflows:
+
+- `.github/workflows/build-and-publish.yaml` — builds and publishes Docker images
+- `.github/workflows/release-please.yaml` — manages releases and version tags
 
 ### Published registries
 
