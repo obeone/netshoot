@@ -34,6 +34,7 @@
     # =========================[ Line #1 ]=========================
     os_icon                 # os identifier
     context
+    host_indicator          # color-coded remote host identification (custom)
     dir                     # current directory
     vcs                     # git status
     kubecontext
@@ -57,65 +58,35 @@
     background_jobs         # presence of background jobs
     direnv                  # direnv status (https://direnv.net/)
     asdf                    # asdf version manager (https://github.com/asdf-vm/asdf)
-    goenv                   # go environment (https://github.com/syndbg/goenv)
-    nodenv                  # node.js version from nodenv (https://github.com/nodenv/nodenv)
     nvm                     # node.js version from nvm (https://github.com/nvm-sh/nvm)
-    nodeenv                 # node.js environment (https://github.com/ekalinin/nodeenv)
-    # node_version          # node.js version
-    # go_version            # go version (https://golang.org)
-    # rust_version          # rustc version (https://www.rust-lang.org)
-    # dotnet_version        # .NET version (https://dotnet.microsoft.com)
-    php_version           # php version (https://www.php.net/)
-    laravel_version       # laravel php framework version (https://laravel.com/)
-    # java_version          # java version (https://www.java.com/)
-    # package               # name@version from package.json (https://docs.npmjs.com/files/package.json)
+    php_version             # php version (https://www.php.net/)
+    laravel_version         # laravel php framework version (https://laravel.com/)
     rbenv                   # ruby version from rbenv (https://github.com/rbenv/rbenv)
-    rvm                     # ruby version from rvm (https://rvm.io)
-    fvm                     # flutter version management (https://github.com/leoafarias/fvm)
-    luaenv                  # lua version from luaenv (https://github.com/cehoffman/luaenv)
-    jenv                    # java version from jenv (https://github.com/jenv/jenv)
-    plenv                   # perl version from plenv (https://github.com/tokuhirom/plenv)
-    perlbrew                # perl version from perlbrew (https://github.com/gugod/App-perlbrew)
-    phpenv                  # php version from phpenv (https://github.com/phpenv/phpenv)
-    scalaenv                # scala version from scalaenv (https://github.com/scalaenv/scalaenv)
-    haskell_stack           # haskell version from stack (https://haskellstack.org/)
-    kubecontext             # current kubernetes context (https://kubernetes.io/)
-    #terraform               # terraform workspace (https://www.terraform.io)
-    # terraform_version     # terraform version (https://www.terraform.io)
-    #aws                     # aws profile (https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-profiles.html)
-    #aws_eb_env              # aws elastic beanstalk environment (https://aws.amazon.com/elasticbeanstalk/)
-    #azure                   # azure account name (https://docs.microsoft.com/en-us/cli/azure)
-    #gcloud                  # google cloud cli account and project (https://cloud.google.com/)
-    #google_app_cred         # google application credentials (https://cloud.google.com/docs/authentication/production)
+    # kubecontext           # already in LEFT_PROMPT_ELEMENTS
     toolbox                 # toolbox name (https://github.com/containers/toolbox)
-    #context                 # user@hostname
     nordvpn                 # nordvpn connection status, linux only (https://nordvpn.com/)
     ranger                  # ranger shell (https://github.com/ranger/ranger)
     nnn                     # nnn shell (https://github.com/jarun/nnn)
-    lf                      # lf shell (https://github.com/gokcehan/lf)
-    xplr                    # xplr shell (https://github.com/sayanarijit/xplr)
     vim_shell               # vim shell indicator (:sh)
     midnight_commander      # midnight commander shell (https://midnight-commander.org/)
     nix_shell               # nix shell (https://nixos.org/nixos/nix-pills/developing-with-nix-shell.html)
-    vi_mode                 # vi mode (you don't need this if you've enabled prompt_char)
-    vpn_ip                # virtual private network indicator
-    load                  # CPU load
-    # disk_usage            # disk usage
-    ram                   # free RAM
-    swap                  # used swap
-    todo                    # todo items (https://github.com/todotxt/todo.txt-cli)
-    timewarrior             # timewarrior tracking status (https://timewarrior.net/)
-    taskwarrior             # taskwarrior task count (https://taskwarrior.org/)
-    # cpu_arch              # CPU architecture
+    # vi_mode               # redundant with prompt_char
+    # vpn_ip                # moved to btop/htop territory
+    # load                  # moved to btop/htop territory
+    # ram                   # moved to btop/htop territory
+    # swap                  # moved to btop/htop territory
+    last_commit_age         # time since last git commit (custom)
+    stash_warning           # git stash accumulation warning (custom)
+    port_forwards           # active SSH/kubectl port forwards (custom)
+    bg_downloads            # background download indicator (custom)
+    disk_io                 # high disk I/O warning (custom)
+    energy_mode             # macOS power mode (custom)
     time                    # current time
     # =========================[ Line #2 ]=========================
     newline                 # \n
-    # ip                    # ip address and bandwidth usage for a specified network interface
-    public_ip             # public IP address
-    # proxy                 # system-wide http/https/ftp proxy
-    battery               # internal battery
-    wifi                  # wifi speed
-    # example               # example user-defined segment (see prompt_example function below)
+    # public_ip             # makes a network call on every prompt, use `curl ifconfig.me` instead
+    # battery               # moved to OS status bar territory
+    # wifi                  # moved to OS status bar territory
   )
 
   # Defines character set used by powerlevel10k. It's best to let `p10k configure` set it for you.
@@ -288,7 +259,7 @@
   # opening a directory in the file manager simply by clicking the link.
   # Can also be handy when the directory is shortened, as it allows you to see
   # the full directory that was used in previous commands.
-  typeset -g POWERLEVEL9K_DIR_HYPERLINK=false
+  typeset -g POWERLEVEL9K_DIR_HYPERLINK=true
 
   # Enable special styling for non-writable and non-existent directories. See POWERLEVEL9K_LOCK_ICON
   # and POWERLEVEL9K_DIR_CLASSES below.
@@ -636,22 +607,22 @@
   # Ruby version from asdf.
   typeset -g POWERLEVEL9K_ASDF_RUBY_FOREGROUND=168
   # typeset -g POWERLEVEL9K_ASDF_RUBY_VISUAL_IDENTIFIER_EXPANSION='⭐'
-  # typeset -g POWERLEVEL9K_ASDF_RUBY_SHOW_ON_UPGLOB='*.foo|*.bar'
+  typeset -g POWERLEVEL9K_ASDF_RUBY_SHOW_ON_UPGLOB='Gemfile|.ruby-version|*.rb'
 
   # Python version from asdf.
   typeset -g POWERLEVEL9K_ASDF_PYTHON_FOREGROUND=37
   # typeset -g POWERLEVEL9K_ASDF_PYTHON_VISUAL_IDENTIFIER_EXPANSION='⭐'
-  # typeset -g POWERLEVEL9K_ASDF_PYTHON_SHOW_ON_UPGLOB='*.foo|*.bar'
+  typeset -g POWERLEVEL9K_ASDF_PYTHON_SHOW_ON_UPGLOB='*.py|requirements.txt|pyproject.toml|.python-version'
 
   # Go version from asdf.
   typeset -g POWERLEVEL9K_ASDF_GOLANG_FOREGROUND=37
   # typeset -g POWERLEVEL9K_ASDF_GOLANG_VISUAL_IDENTIFIER_EXPANSION='⭐'
-  # typeset -g POWERLEVEL9K_ASDF_GOLANG_SHOW_ON_UPGLOB='*.foo|*.bar'
+  typeset -g POWERLEVEL9K_ASDF_GOLANG_SHOW_ON_UPGLOB='go.mod|*.go'
 
   # Node.js version from asdf.
   typeset -g POWERLEVEL9K_ASDF_NODEJS_FOREGROUND=70
   # typeset -g POWERLEVEL9K_ASDF_NODEJS_VISUAL_IDENTIFIER_EXPANSION='⭐'
-  # typeset -g POWERLEVEL9K_ASDF_NODEJS_SHOW_ON_UPGLOB='*.foo|*.bar'
+  typeset -g POWERLEVEL9K_ASDF_NODEJS_SHOW_ON_UPGLOB='package.json|.nvmrc|.node-version'
 
   # Rust version from asdf.
   typeset -g POWERLEVEL9K_ASDF_RUST_FOREGROUND=37
@@ -701,7 +672,7 @@
   # PHP version from asdf.
   typeset -g POWERLEVEL9K_ASDF_PHP_FOREGROUND=99
   # typeset -g POWERLEVEL9K_ASDF_PHP_VISUAL_IDENTIFIER_EXPANSION='⭐'
-  # typeset -g POWERLEVEL9K_ASDF_PHP_SHOW_ON_UPGLOB='*.foo|*.bar'
+  typeset -g POWERLEVEL9K_ASDF_PHP_SHOW_ON_UPGLOB='composer.json|*.php|artisan'
 
   # Haskell version from asdf.
   typeset -g POWERLEVEL9K_ASDF_HASKELL_FOREGROUND=172
@@ -891,7 +862,8 @@
 
   ##################################[ context: user@hostname ]##################################
   # Context color when running with privileges.
-  typeset -g POWERLEVEL9K_CONTEXT_ROOT_FOREGROUND=178
+  typeset -g POWERLEVEL9K_CONTEXT_ROOT_FOREGROUND=210         # salmon/light red text
+  typeset -g POWERLEVEL9K_CONTEXT_ROOT_BACKGROUND=52          # dark red background (subtle)
   # Context color in SSH without privileges.
   typeset -g POWERLEVEL9K_CONTEXT_{REMOTE,REMOTE_SUDO}_FOREGROUND=180
   # Default context color (no privileges, no SSH).
@@ -1014,6 +986,8 @@
   ##############[ nvm: node.js version from nvm (https://github.com/nvm-sh/nvm) ]###############
   # Nvm color.
   typeset -g POWERLEVEL9K_NVM_FOREGROUND=70
+  # Show NVM only when Node project files are found
+  typeset -g POWERLEVEL9K_NVM_SHOW_ON_UPGLOB='package.json|.nvmrc|.node-version'
   # Custom icon.
   # typeset -g POWERLEVEL9K_NVM_VISUAL_IDENTIFIER_EXPANSION='⭐'
 
@@ -1064,12 +1038,16 @@
   typeset -g POWERLEVEL9K_PHP_VERSION_FOREGROUND=99
   # Show PHP version only when in a PHP project subdirectory.
   typeset -g POWERLEVEL9K_PHP_VERSION_PROJECT_ONLY=true
+  # Show PHP version only when relevant project files are found
+  typeset -g POWERLEVEL9K_PHP_VERSION_SHOW_ON_UPGLOB='composer.json|*.php|artisan'
   # Custom icon.
   # typeset -g POWERLEVEL9K_PHP_VERSION_VISUAL_IDENTIFIER_EXPANSION='⭐'
 
   ##########[ laravel_version: laravel php framework version (https://laravel.com/) ]###########
   # Laravel version color.
   typeset -g POWERLEVEL9K_LARAVEL_VERSION_FOREGROUND=161
+  # Show Laravel version only when artisan is present
+  typeset -g POWERLEVEL9K_LARAVEL_VERSION_SHOW_ON_UPGLOB='artisan'
   # Custom icon.
   # typeset -g POWERLEVEL9K_LARAVEL_VERSION_VISUAL_IDENTIFIER_EXPANSION='⭐'
 
@@ -1105,6 +1083,8 @@
   typeset -g POWERLEVEL9K_RBENV_PROMPT_ALWAYS_SHOW=false
   # If set to false, hide ruby version if it's equal to "system".
   typeset -g POWERLEVEL9K_RBENV_SHOW_SYSTEM=true
+  # Show rbenv only when Ruby project files are found
+  typeset -g POWERLEVEL9K_RBENV_SHOW_ON_UPGLOB='Gemfile|.ruby-version|*.rb'
   # Custom icon.
   # typeset -g POWERLEVEL9K_RBENV_VISUAL_IDENTIFIER_EXPANSION='⭐'
 
@@ -1284,11 +1264,15 @@
   #   typeset -g POWERLEVEL9K_KUBECONTEXT_TEST_VISUAL_IDENTIFIER_EXPANSION='⭐'
   #   typeset -g POWERLEVEL9K_KUBECONTEXT_TEST_CONTENT_EXPANSION='> ${P9K_CONTENT} <'
   typeset -g POWERLEVEL9K_KUBECONTEXT_CLASSES=(
-      # '*prod*'  PROD    # These values are examples that are unlikely
-      # '*test*'  TEST    # to match your needs. Customize them as needed.
-      '*'       DEFAULT)
-  typeset -g POWERLEVEL9K_KUBECONTEXT_DEFAULT_FOREGROUND=134
-  # typeset -g POWERLEVEL9K_KUBECONTEXT_DEFAULT_VISUAL_IDENTIFIER_EXPANSION='⭐'
+      '*prod*'    PROD
+      '*staging*' STAGING
+      '*dev*'     DEV
+      '*'         DEFAULT)
+  typeset -g POWERLEVEL9K_KUBECONTEXT_PROD_FOREGROUND=196       # red - danger zone
+  typeset -g POWERLEVEL9K_KUBECONTEXT_PROD_VISUAL_IDENTIFIER_EXPANSION='⚠'
+  typeset -g POWERLEVEL9K_KUBECONTEXT_STAGING_FOREGROUND=178    # yellow/orange
+  typeset -g POWERLEVEL9K_KUBECONTEXT_DEV_FOREGROUND=76         # green - safe
+  typeset -g POWERLEVEL9K_KUBECONTEXT_DEFAULT_FOREGROUND=134    # purple
 
   # Use POWERLEVEL9K_KUBECONTEXT_CONTENT_EXPANSION to specify the content displayed by kubecontext
   # segment. Parameter expansions are very flexible and fast, too. See reference:
@@ -1598,7 +1582,7 @@
   # If set to true, time will update when you hit enter. This way prompts for the past
   # commands will contain the start times of their commands as opposed to the default
   # behavior where they contain the end times of their preceding commands.
-  typeset -g POWERLEVEL9K_TIME_UPDATE_ON_COMMAND=false
+  typeset -g POWERLEVEL9K_TIME_UPDATE_ON_COMMAND=true
   # Custom icon.
   # typeset -g POWERLEVEL9K_TIME_VISUAL_IDENTIFIER_EXPANSION='⭐'
   # Custom prefix.
@@ -1655,12 +1639,214 @@
   #   - verbose: Enable instant prompt and print a warning when detecting console output during
   #              zsh initialization. Choose this if you've never tried instant prompt, haven't
   #              seen the warning, or if you are unsure what this all means.
-  typeset -g POWERLEVEL9K_INSTANT_PROMPT=verbose
+  typeset -g POWERLEVEL9K_INSTANT_PROMPT=quiet
 
   function prompt_histoff() {
     if [[ $HIST_IGNORE_ALL = true ]]; then
         p10k segment -i '😈'
     fi
+  }
+
+  ##########################[ Custom segments ]##########################
+
+  # ---- disk_io: High disk I/O indicator (macOS + Linux) ----
+  # Shows a warning icon when disk I/O is abnormally high.
+  typeset -g POWERLEVEL9K_DISK_IO_THRESHOLD_KB=50000  # 50 MB/s
+  typeset -g POWERLEVEL9K_DISK_IO_FOREGROUND=208       # orange
+  typeset -g _P9K_DISK_IO_CACHE_VAL=0
+  typeset -g _P9K_DISK_IO_CACHE_TS=0
+  function prompt_disk_io() {
+    # EPOCHSECONDS is a zsh builtin, no fork needed
+    if (( EPOCHSECONDS - _P9K_DISK_IO_CACHE_TS > 10 )); then
+      _P9K_DISK_IO_CACHE_TS=$EPOCHSECONDS
+      if [[ "$OSTYPE" == darwin* ]]; then
+        # macOS: async refresh to avoid blocking prompt
+        {
+          local val
+          val=$(iostat -d -c 2 -w 1 disk0 2>/dev/null | tail -1 | awk '{print int(($1+$2)*1024/1024)}')
+          typeset -g _P9K_DISK_IO_CACHE_VAL=${val:-0}
+        } &!
+      else
+        # Linux: /proc/diskstats is instantaneous, no fork
+        _P9K_DISK_IO_CACHE_VAL=$(awk '/^[[:space:]]+(sd|nvme|vd)/{io+=$6+$10} END{print int(io/2)}' /proc/diskstats 2>/dev/null)
+      fi
+    fi
+    (( _P9K_DISK_IO_CACHE_VAL > POWERLEVEL9K_DISK_IO_THRESHOLD_KB )) || return
+    p10k segment -f 208 -i '💾' -t "${_P9K_DISK_IO_CACHE_VAL}K/s"
+  }
+
+  # ---- stash_warning: Git stash accumulation warning ----
+  # Shows a warning when you have too many forgotten stashes.
+  typeset -g POWERLEVEL9K_STASH_WARNING_THRESHOLD=3
+  typeset -g POWERLEVEL9K_STASH_WARNING_FOREGROUND=208  # orange
+  function prompt_stash_warning() {
+    # Only show in git repos, rely on VCS_STATUS set by gitstatus
+    (( VCS_STATUS_STASHES > POWERLEVEL9K_STASH_WARNING_THRESHOLD )) || return
+    p10k segment -f 208 -i '📦' -t "${VCS_STATUS_STASHES} stashes"
+  }
+
+  # ---- last_commit_age: Time since last git commit ----
+  # Shows how long ago the last commit was made. Gentle passive-aggressive reminder.
+  typeset -g POWERLEVEL9K_LAST_COMMIT_AGE_WARN_HOURS=24    # yellow after 24h
+  typeset -g POWERLEVEL9K_LAST_COMMIT_AGE_CRIT_HOURS=72    # red after 72h
+  typeset -g _P9K_COMMIT_AGE_CACHE_TS=0
+  typeset -g _P9K_COMMIT_AGE_CACHE_VAL=''
+  typeset -g _P9K_COMMIT_AGE_CACHE_DIR=''
+  function prompt_last_commit_age() {
+    # Only in git repos
+    [[ -n $VCS_STATUS_LOCAL_BRANCH ]] || return
+
+    # Refresh cache every 30s or when we change repo
+    if (( EPOCHSECONDS - _P9K_COMMIT_AGE_CACHE_TS > 30 )) || [[ "$VCS_STATUS_WORKDIR" != "$_P9K_COMMIT_AGE_CACHE_DIR" ]]; then
+      _P9K_COMMIT_AGE_CACHE_TS=$EPOCHSECONDS
+      _P9K_COMMIT_AGE_CACHE_DIR="$VCS_STATUS_WORKDIR"
+      _P9K_COMMIT_AGE_CACHE_VAL=$(git -C "${VCS_STATUS_WORKDIR}" log -1 --format='%ct' 2>/dev/null)
+    fi
+
+    [[ -n $_P9K_COMMIT_AGE_CACHE_VAL ]] || return
+    local delta=$(( EPOCHSECONDS - _P9K_COMMIT_AGE_CACHE_VAL ))
+    (( delta > 0 )) || return
+
+    local fg=244  # grey
+    local hours=$(( delta / 3600 ))
+    (( hours >= POWERLEVEL9K_LAST_COMMIT_AGE_WARN_HOURS )) && fg=178  # yellow
+    (( hours >= POWERLEVEL9K_LAST_COMMIT_AGE_CRIT_HOURS )) && fg=196  # red
+
+    local text
+    if (( delta < 3600 )); then
+      text="$(( delta / 60 ))m ago"
+    elif (( delta < 86400 )); then
+      text="${hours}h ago"
+    else
+      text="$(( delta / 86400 ))d ago"
+    fi
+    p10k segment -f $fg -i '🕐' -t "$text"
+  }
+
+  # ---- port_forwards: Count active port forwards (SSH + kubectl) ----
+  # Reminds you about tunnels you forgot about.
+  typeset -g POWERLEVEL9K_PORT_FORWARDS_FOREGROUND=81  # light blue
+  typeset -g _P9K_PORT_FWD_CACHE_TS=0
+  typeset -g _P9K_PORT_FWD_CACHE_VAL=0
+  function prompt_port_forwards() {
+    # Refresh every 10s — tunnels don't appear/disappear that fast
+    if (( EPOCHSECONDS - _P9K_PORT_FWD_CACHE_TS > 10 )); then
+      _P9K_PORT_FWD_CACHE_TS=$EPOCHSECONDS
+      # Single ps call, grep both patterns from it
+      local ps_out=$(ps -eo args= 2>/dev/null)
+      local sc=$(grep -c '[s]sh .* -[LRD] ' <<< "$ps_out")
+      local kc=$(grep -c '[k]ubectl.*port-forward' <<< "$ps_out")
+      _P9K_PORT_FWD_CACHE_VAL=$(( sc + kc ))
+    fi
+    (( _P9K_PORT_FWD_CACHE_VAL > 0 )) || return
+    local fg=81
+    (( _P9K_PORT_FWD_CACHE_VAL > 3 )) && fg=178
+    (( _P9K_PORT_FWD_CACHE_VAL > 6 )) && fg=196
+    p10k segment -f $fg -i '🔀' -t "${_P9K_PORT_FWD_CACHE_VAL} fwd"
+  }
+
+  # ---- bg_downloads: Indicator for background download processes ----
+  # Shows when curl/wget/aria2c/docker pull is actively running.
+  typeset -g POWERLEVEL9K_BG_DOWNLOADS_FOREGROUND=37  # cyan
+  typeset -g _P9K_BG_DL_CACHE_TS=0
+  typeset -g _P9K_BG_DL_CACHE_VAL=''
+  function prompt_bg_downloads() {
+    # Refresh every 5s
+    if (( EPOCHSECONDS - _P9K_BG_DL_CACHE_TS > 5 )); then
+      _P9K_BG_DL_CACHE_TS=$EPOCHSECONDS
+      # Single ps call, check all patterns
+      local ps_out=$(ps -eo comm= 2>/dev/null)
+      local found=()
+      grep -qx curl <<< "$ps_out"   && found+=(curl)
+      grep -qx wget <<< "$ps_out"   && found+=(wget)
+      grep -qx aria2c <<< "$ps_out" && found+=(aria2c)
+      # docker/podman pull needs args, not just comm
+      if (( ${#found} == 0 )); then
+        local ps_args=$(ps -eo args= 2>/dev/null)
+        grep -q '^docker pull\b' <<< "$ps_args"  && found+=(docker)
+        grep -q '^podman pull\b' <<< "$ps_args"  && found+=(podman)
+      fi
+      _P9K_BG_DL_CACHE_VAL="${(j:,:)found}"
+    fi
+    [[ -n $_P9K_BG_DL_CACHE_VAL ]] || return
+    p10k segment -f 37 -i '⬇' -t "$_P9K_BG_DL_CACHE_VAL"
+  }
+
+  # ---- energy_mode: macOS power mode indicator ----
+  # Shows current energy mode (Low Power / High Performance).
+  # Only relevant on macOS laptops.
+  typeset -g POWERLEVEL9K_ENERGY_MODE_FOREGROUND=70  # green
+  typeset -g _P9K_ENERGY_MODE_CACHE_VAL=''
+  typeset -g _P9K_ENERGY_MODE_CACHE_TS=0
+  function prompt_energy_mode() {
+    [[ "$OSTYPE" == darwin* ]] || return
+    if (( EPOCHSECONDS - _P9K_ENERGY_MODE_CACHE_TS > 30 )); then
+      _P9K_ENERGY_MODE_CACHE_TS=$EPOCHSECONDS
+      _P9K_ENERGY_MODE_CACHE_VAL=$(pmset -g 2>/dev/null | awk '/lowpowermode/{print $2}')
+    fi
+    case "$_P9K_ENERGY_MODE_CACHE_VAL" in
+      1) p10k segment -f 178 -i '🔋' -t 'LowPwr' ;;   # yellow - throttled
+      2) p10k segment -f 196 -i '🔥' -t 'HiPerf' ;;    # red - fans go brrrr
+      # 0 or auto: don't show anything, it's the normal state
+    esac
+  }
+
+  # ---- host_indicator: Color-coded host identification ----
+  # Assigns a unique color+icon per machine type based on hostname patterns.
+  # Only shows when in SSH (not on local machine).
+  # Customize the _HOST_MAP associative array to match your infra.
+  typeset -gA _P9K_HOST_MAP=(
+    # Pattern         "icon foreground_color"
+    # Edge routers
+    [fra1]="🌍 39"      # blue   - Frankfurt
+    [dus1]="🌍 39"      # blue   - Düsseldorf
+    [par1]="🌍 39"      # blue   - Paris
+    [nyc1]="🌍 39"      # blue   - New York
+    # Proxmox / hypervisors
+    [pve*]="🖥 134"     # purple - Proxmox nodes
+    [prox*]="🖥 134"    # purple - Proxmox nodes
+    # Kubernetes nodes
+    [k8s*]="☸ 70"       # green  - k8s workers
+    [kube*]="☸ 70"      # green  - k8s workers
+    # CI runners
+    [runner*]="🔨 178"  # yellow - GitLab runners
+    [ci*]="🔨 178"      # yellow - GitLab runners
+    # Tor relays
+    [tor*]="🧅 99"      # violet - Tor relays
+    [oyster*]="🧅 99"   # violet - drunken oysters
+  )
+  # Fallback color for unknown hosts (deterministic hash-based color)
+  function prompt_host_indicator() {
+    # Only show in SSH sessions
+    [[ -n $SSH_CONNECTION || -n $SSH_CLIENT || -n $SSH_TTY ]] || return
+
+    local hostname="${(%):-%m}"
+    local icon='📡'
+    local fg=180  # default: warm grey
+
+    # Try pattern matching against host map
+    local pattern
+    for pattern in "${(@k)_P9K_HOST_MAP}"; do
+      if [[ "$hostname" == ${~pattern} ]]; then
+        local val="${_P9K_HOST_MAP[$pattern]}"
+        icon="${val%% *}"
+        fg="${val##* }"
+        break
+      fi
+    done
+
+    # If no pattern matched, derive a deterministic color from hostname
+    # so each unknown host always gets the same color
+    if [[ "$fg" == "180" ]]; then
+      local hash=0 i
+      for (( i=1; i<=${#hostname}; i++ )); do
+        hash=$(( (hash * 31 + #hostname[i]) % 256 ))
+      done
+      # Avoid colors that are too dark (0-16) or too close to background (232-255)
+      fg=$(( hash % 200 + 22 ))
+    fi
+
+    p10k segment -f $fg -i "$icon" -t "$hostname"
   }
 
 
