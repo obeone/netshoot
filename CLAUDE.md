@@ -112,7 +112,7 @@ GitHub Actions workflow: `.github/workflows/build-and-publish.yaml`
 
 - **Push to `main`**: Publishes floating tags (latest, docker, podman, etc.) to both registries. Signs images with cosign (OIDC keyless).
 - **Push tag `v*.*.*`**: Publishes SemVer tags per variant (e.g., `1.2.3`, `1.2.3-docker`, `1.2-docker`, `1-docker`) to both registries. Signs images.
-- **Pull requests** (`pull_request_target`): Publishes `pr-<number>` tags to GHCR only. Only builds if PR author is trusted or PR is approved by an org OWNER/MEMBER.
+- **Pull requests** (`pull_request`): Build-only (no push) to validate Docker builds succeed. Only runs if PR author is trusted or PR is approved by an org OWNER/MEMBER. Uses `concurrency` to cancel in-progress PR builds when new commits are pushed.
 
 ### Required secrets
 
