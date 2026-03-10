@@ -1,10 +1,10 @@
-# This workflow builds and pushes Netshoot Docker images to GHCR and Docker Hub.
+# This workflow builds and publishes Netshoot Docker images to GHCR and Docker Hub.
 #
 # Triggers:
 # - Push to 'main' branch: publishes floating tags (latest, docker, podman, etc.)
 # - Push of tags 'v*.*.*': publishes SemVer tags per variant (e.g. 1.2.3-docker)
-# - Pull Requests (via pull_request_target): pushes PR tags to GHCR only,
-#   but only if PR author is trusted or the PR is approved by an org OWNER/MEMBER.
+# - Pull Requests: build-only (no push) to validate that the Docker build succeeds.
+#   Only runs if PR author is trusted or PR is approved by an org OWNER/MEMBER.
 #
 # Build order:
 # 1. gatekeeper     — PR security check (runs once, not per variant)
@@ -24,8 +24,12 @@ on:
       - main
     tags:
       - 'v*.*.*'
-  pull_request_target:
+  pull_request:
     types: [opened, synchronize, reopened]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 # ---------------------------------------------------------------------------
 # Gatekeeper: PR security check (runs once for the whole workflow)
@@ -37,6 +41,7 @@ jobs:
       pull-requests: read
     outputs:
       run_build: ${{ steps.check.outputs.run_build }}
+      push_images: ${{ steps.check.outputs.push_images }}
       push_dockerhub: ${{ steps.check.outputs.push_dockerhub }}
       sign_images: ${{ steps.check.outputs.sign_images }}
       has_dockerhub_secrets: ${{ steps.secrets.outputs.has_dockerhub_secrets }}
@@ -55,12 +60,14 @@ jobs:
 
           if [[ "$EVENT_NAME" == "push" ]]; then
             echo "Event is push, proceeding with build/push/sign."
-            echo "run_build=true"      >> "$GITHUB_OUTPUT"
-            echo "push_dockerhub=true" >> "$GITHUB_OUTPUT"
-            echo "sign_images=true"    >> "$GITHUB_OUTPUT"
+            echo "run_build=true"       >> "$GITHUB_OUTPUT"
+            echo "push_images=true"     >> "$GITHUB_OUTPUT"
+            echo "push_dockerhub=true"  >> "$GITHUB_OUTPUT"
+            echo "sign_images=true"     >> "$GITHUB_OUTPUT"
             exit 0
           fi
 
+          # Pull request: build-only (no push, no sign)
           echo "PR #${PR_NUMBER} by ${PR_AUTHOR}"
 
           # Check if author is trusted
@@ -77,15 +84,16 @@ jobs:
           [[ -n "${approvals}" ]] && approved="true"
 
           if [[ "$trusted" == "true" || "$approved" == "true" ]]; then
-            echo "PR meets security criteria, proceeding with build/push to GHCR only."
+            echo "PR meets security criteria, proceeding with build-only (no push)."
             echo "run_build=true" >> "$GITHUB_OUTPUT"
           else
             echo "PR does not meet security criteria, skipping build."
             echo "run_build=false" >> "$GITHUB_OUTPUT"
           fi
 
-          echo "push_dockerhub=false" >> "$GITHUB_OUTPUT"
-          echo "sign_images=false"    >> "$GITHUB_OUTPUT"
+          echo "push_images=false"     >> "$GITHUB_OUTPUT"
+          echo "push_dockerhub=false"  >> "$GITHUB_OUTPUT"
+          echo "sign_images=false"     >> "$GITHUB_OUTPUT"
 
       - name: Check Docker Hub credentials availability
         id: secrets
@@ -128,16 +136,8 @@ jobs:
             semver_suffix: -slim
 
     steps:
-      - name: Checkout (push)
-        if: github.event_name == 'push'
+      - name: Checkout
         uses: actions/checkout@v4
-
-      - name: Checkout (pull_request_target)
-        if: github.event_name == 'pull_request_target'
-        uses: actions/checkout@v4
-        with:
-          repository: ${{ github.event.pull_request.head.repo.full_name }}
-          ref: ${{ github.event.pull_request.head.sha }}
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
@@ -146,6 +146,7 @@ jobs:
         uses: docker/setup-buildx-action@v3
 
       - name: Log in to GitHub Container Registry
+        if: needs.gatekeeper.outputs.push_images == 'true'
         uses: docker/login-action@v3
         with:
           registry: ghcr.io
@@ -160,6 +161,7 @@ jobs:
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
       - name: Compute tags
+        if: needs.gatekeeper.outputs.push_images == 'true'
         id: tags
         uses: ./.github/actions/compute-tags
         with:
@@ -175,9 +177,9 @@ jobs:
           context: .
           file: ./${{ matrix.dockerfile }}
           target: ${{ matrix.target }}
-          push: true
+          push: ${{ needs.gatekeeper.outputs.push_images == 'true' }}
           platforms: linux/amd64,linux/arm64
-          tags: ${{ steps.tags.outputs.tags }}
+          tags: ${{ steps.tags.outputs.tags || '' }}
           cache-from: type=gha,scope=buildkit-${{ matrix.variant }}
           cache-to: type=gha,scope=buildkit-${{ matrix.variant }},mode=max
 
@@ -236,16 +238,8 @@ jobs:
             semver_suffix: -containerd
 
     steps:
-      - name: Checkout (push)
-        if: github.event_name == 'push'
+      - name: Checkout
         uses: actions/checkout@v4
-
-      - name: Checkout (pull_request_target)
-        if: github.event_name == 'pull_request_target'
-        uses: actions/checkout@v4
-        with:
-          repository: ${{ github.event.pull_request.head.repo.full_name }}
-          ref: ${{ github.event.pull_request.head.sha }}
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
@@ -254,6 +248,7 @@ jobs:
         uses: docker/setup-buildx-action@v3
 
       - name: Log in to GitHub Container Registry
+        if: needs.gatekeeper.outputs.push_images == 'true'
         uses: docker/login-action@v3
         with:
           registry: ghcr.io
@@ -268,6 +263,7 @@ jobs:
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
       - name: Compute tags
+        if: needs.gatekeeper.outputs.push_images == 'true'
         id: tags
         uses: ./.github/actions/compute-tags
         with:
@@ -283,9 +279,9 @@ jobs:
           context: .
           file: ./Dockerfile
           target: ${{ matrix.target }}
-          push: true
+          push: ${{ needs.gatekeeper.outputs.push_images == 'true' }}
           platforms: linux/amd64,linux/arm64
-          tags: ${{ steps.tags.outputs.tags }}
+          tags: ${{ steps.tags.outputs.tags || '' }}
           cache-from: |
             type=gha,scope=buildkit-base
             type=gha,scope=buildkit-${{ matrix.variant }}
