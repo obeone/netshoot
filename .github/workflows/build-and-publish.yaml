@@ -181,7 +181,7 @@ jobs:
           platforms: linux/amd64,linux/arm64
           tags: ${{ steps.tags.outputs.tags || '' }}
           cache-from: type=gha,scope=buildkit-${{ matrix.variant }}
-          cache-to: ${{ needs.gatekeeper.outputs.push_images == 'true' && format('type=gha,scope=buildkit-{0},mode=max', matrix.variant) || '' }}
+          cache-to: type=gha,scope=buildkit-${{ matrix.variant }},mode=max
 
       - name: Set up cosign
         if: needs.gatekeeper.outputs.sign_images == 'true'
@@ -285,7 +285,7 @@ jobs:
           cache-from: |
             type=gha,scope=buildkit-base
             type=gha,scope=buildkit-${{ matrix.variant }}
-          cache-to: ${{ needs.gatekeeper.outputs.push_images == 'true' && format('type=gha,scope=buildkit-{0},mode=max', matrix.variant) || '' }}
+          cache-to: type=gha,scope=buildkit-${{ matrix.variant }},mode=max
 
       - name: Set up cosign
         if: needs.gatekeeper.outputs.sign_images == 'true'
