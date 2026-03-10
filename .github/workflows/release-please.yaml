@@ -1,0 +1,29 @@
+# This workflow manages releases using release-please.
+#
+# On every push to main, release-please either creates or updates a
+# "Release PR" that accumulates changelog entries and computes the next
+# SemVer version from conventional commits. When the Release PR is
+# merged, release-please creates a git tag (vX.Y.Z) and a GitHub
+# Release. The existing build-and-publish workflow then triggers on the
+# new tag to build and push Docker images.
+
+name: Release Please
+
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  release-please:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Run release-please
+        uses: googleapis/release-please-action@v4
+        with:
+          config-file: release-please-config.json
+          manifest-file: .release-please-manifest.json
