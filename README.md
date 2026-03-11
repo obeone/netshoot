@@ -257,6 +257,13 @@ organized by category:
 | Plugins | zsh-autosuggestions, zsh-completions, fast-syntax-highlighting |
 | Multiplexer | tmux |
 
+> **Note:** The default prompt uses plain Unicode and
+> works in any terminal. If you have a
+> [Nerd Font](https://www.nerdfonts.com/) installed,
+> set `NETSHOOT_NERDFONT=1` to enable powerline
+> separators and richer icons (see
+> [Nerd Font prompt](#nerd-font-prompt) below).
+
 ### Security and Authentication
 
 | Category | Tools |
@@ -292,6 +299,20 @@ fast-syntax-highlighting
 </details>
 
 ## Advanced Usage
+
+### Nerd Font Prompt
+
+The default prompt uses plain Unicode characters that
+work in any terminal. If you have a
+[Nerd Font](https://www.nerdfonts.com/) installed on
+your terminal, enable the enhanced prompt with
+powerline separators and richer icons:
+
+```bash
+docker run -it --rm \
+  -e NETSHOOT_NERDFONT=1 \
+  obeoneorg/netshoot
+```
 
 ### Custom Shell Configuration
 

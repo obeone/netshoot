@@ -108,6 +108,7 @@ RUN --mount=type=cache,target=/root/.cache \
 # Copy configuration files and scripts using --link for better layer reuse.
 COPY --link configs/zshrc /root/.zshrc
 COPY --link configs/p10k.zsh /root/.p10k.zsh
+COPY --link configs/p10k-ascii.zsh /root/.p10k-ascii.zsh
 COPY --link --chmod=755 tools/transfer.sh /usr/local/bin/transfer.sh
 
 # Set the working directory and default command.
