@@ -3,6 +3,8 @@
 # Triggers:
 # - Push to 'main' branch: publishes floating tags (latest, docker, podman, etc.)
 # - Push of tags 'v*.*.*': publishes SemVer tags per variant (e.g. 1.2.3-docker)
+# - Manual dispatch (workflow_dispatch): same behaviour as a push (build + push
+#   + sign). Restricted by GitHub to users with write access to the repo.
 # - Pull Requests: build-only (no push) to validate that the Docker build succeeds.
 #   Only runs if PR author is trusted or PR is approved by an org OWNER/MEMBER.
 #
@@ -26,6 +28,7 @@ on:
       - 'v*.*.*'
   pull_request:
     types: [opened, synchronize, reopened]
+  workflow_dispatch:
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -58,8 +61,8 @@ jobs:
         run: |
           set -euo pipefail
 
-          if [[ "$EVENT_NAME" == "push" ]]; then
-            echo "Event is push, proceeding with build/push/sign."
+          if [[ "$EVENT_NAME" == "push" || "$EVENT_NAME" == "workflow_dispatch" ]]; then
+            echo "Event is ${EVENT_NAME}, proceeding with build/push/sign."
             echo "run_build=true"       >> "$GITHUB_OUTPUT"
             echo "push_images=true"     >> "$GITHUB_OUTPUT"
             echo "push_dockerhub=true"  >> "$GITHUB_OUTPUT"
