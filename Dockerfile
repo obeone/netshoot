@@ -89,7 +89,6 @@ RUN --mount=type=cache,target=/var/cache/apt,id=apt-${TARGETARCH},sharing=locked
         sysstat
         thefuck
         tmux
-        witr
     )
 
     # Networking tools
@@ -172,6 +171,11 @@ RUN --mount=type=cache,target=/root/.cache \
 COPY scripts/install-grpcurl.sh /tmp/
 RUN --mount=type=cache,target=/tmp/grpcurl \
     /tmp/install-grpcurl.sh
+
+# Install witr from GitHub releases (no Debian trixie package available).
+COPY scripts/install-witr.sh /tmp/
+RUN --mount=type=cache,target=/tmp/witr \
+    /tmp/install-witr.sh
 
 # Install Oh My Zsh, plugins, Powerlevel10k theme, and gitstatus binary.
 # A cache mount is used to speed up git clone operations during repeated builds.
