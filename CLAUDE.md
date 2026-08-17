@@ -107,6 +107,7 @@ Reusable installation scripts live in `scripts/`. Each script uses `#!/usr/bin/e
 - `scripts/install-omz.sh` — Oh My Zsh + plugins + Powerlevel10k + gitstatus (shared by both Dockerfiles)
 - `scripts/install-nerdctl.sh` — nerdctl download with SHA256 verification; accepts `client` or `full` argument
 - `scripts/install-grpcurl.sh` — grpcurl from GitHub releases
+- `scripts/install-witr.sh` — witr from GitHub releases with SHA256 verification (shared by both Dockerfiles; not packaged for trixie)
 
 ## Versioning
 
