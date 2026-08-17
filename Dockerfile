@@ -89,6 +89,7 @@ RUN --mount=type=cache,target=/var/cache/apt,id=apt-${TARGETARCH},sharing=locked
         sysstat
         thefuck
         tmux
+        witr
     )
 
     # Networking tools
@@ -151,7 +152,7 @@ RUN --mount=type=cache,target=/var/cache/apt,id=apt-${TARGETARCH},sharing=locked
     # Add Ookla repository
     curl -fsSL https://packagecloud.io/ookla/speedtest-cli/gpgkey | \
         gpg --dearmor -o /etc/apt/keyrings/speedtest.gpg
-    
+
     echo "deb [signed-by=/etc/apt/keyrings/speedtest.gpg] https://packagecloud.io/ookla/speedtest-cli/debian/ $(. /etc/os-release && echo "$VERSION_CODENAME") main" | \
         tee /etc/apt/sources.list.d/speedtest.list > /dev/null
 
