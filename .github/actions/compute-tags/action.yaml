@@ -52,7 +52,10 @@ runs:
         tags=()
         images=()
 
-        if [[ "$EVENT_NAME" == "push" ]]; then
+        # workflow_dispatch shares the push path: github.ref points at the
+        # branch or tag the run was dispatched from, so the same ref-based
+        # tagging rules apply (floating tags on main, SemVer on v* tags).
+        if [[ "$EVENT_NAME" == "push" || "$EVENT_NAME" == "workflow_dispatch" ]]; then
           images+=("$IMAGE_GHCR")
           [[ "$PUSH_DOCKERHUB" == "true" ]] && images+=("$IMAGE_DOCKERHUB")
 
@@ -72,7 +75,7 @@ runs:
             tags+=("${major}.${minor}${SUFFIX}")
             tags+=("${major}${SUFFIX}")
           else
-            echo "Unsupported ref for push event: $GIT_REF" >&2
+            echo "Unsupported ref for ${EVENT_NAME} event: $GIT_REF" >&2
             exit 1
           fi
         elif [[ "$EVENT_NAME" == "pull_request_target" ]]; then
