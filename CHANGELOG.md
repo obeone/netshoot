@@ -1,5 +1,24 @@
 # Changelog
 
+## [1.2.0](https://github.com/obeone/netshoot/compare/v1.1.0...v1.2.0) (2026-08-18)
+
+
+### Features
+
+* **docker:** install witr from upstream GitHub releases ([1f80ec9](https://github.com/obeone/netshoot/commit/1f80ec97954b7a511604e50d282c49be554be058))
+* install witr from upstream releases and ship it in every image ([fde20f0](https://github.com/obeone/netshoot/commit/fde20f030fb9e623f33965e1cb788605838c2182))
+* **slim:** add witr to the slim image ([a4a1472](https://github.com/obeone/netshoot/commit/a4a147254c4402d85fbb20d5aad192e6cb28db08))
+
+
+### Documentation
+
+* document the witr tool ([02c59b3](https://github.com/obeone/netshoot/commit/02c59b3aec8b0f1e38982fd69e6c7750021465b0))
+
+
+### Miscellaneous
+
+* **docker:** add witr tool ([efa811d](https://github.com/obeone/netshoot/commit/efa811d0fc4316fc08d178352346374b2d271fdd))
+
 ## [1.1.0](https://github.com/obeone/netshoot/compare/v1.0.0...v1.1.0) (2026-05-16)
 
 
