@@ -238,6 +238,7 @@ organized by category:
 | File Operations | rsync, unzip, zip, file |
 | Text Processing | jq, vim |
 | Command Correction | thefuck |
+| Process Provenance | witr (why is this process, port or container running) |
 
 ### Development and Scripting
 
@@ -283,7 +284,7 @@ coreutils, dstat, file, fzf, git, grpcurl, htop,
 iotop, jq, kitty-terminfo, lsof, magic-wormhole,
 ncdu, nfs-common, openssl, procps, python3-pip,
 rsync, strace, sudo, sysstat, thefuck, tmux, unzip,
-util-linux, uv, vim, zip, zsh
+util-linux, uv, vim, witr, zip, zsh
 
 **Shell**: oh-my-zsh, powerlevel10k,
 zsh-autosuggestions, zsh-completions,

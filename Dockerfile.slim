@@ -99,6 +99,11 @@ COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /usr/local/bin/
 # Install 'check-tls' using uv for TLS/SSL certificate checking.
 RUN --mount=type=cache,target=/root/.cache uv tool install check-tls
 
+# Install witr from GitHub releases (no Debian trixie package available).
+COPY scripts/install-witr.sh /tmp/
+RUN --mount=type=cache,target=/tmp/witr \
+    /tmp/install-witr.sh
+
 # Install Oh My Zsh, plugins, Powerlevel10k theme, and gitstatus binary.
 # A cache mount is used to speed up git clone operations during repeated builds.
 COPY scripts/install-omz.sh /tmp/
