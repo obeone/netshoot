@@ -52,7 +52,10 @@ runs:
         tags=()
         images=()
 
-        if [[ "$EVENT_NAME" == "push" ]]; then
+        # A manual dispatch is treated exactly like a push: both resolve their
+        # tags from GIT_REF, so dispatching on main yields the floating tags and
+        # dispatching on a v* tag yields the SemVer tags.
+        if [[ "$EVENT_NAME" == "push" || "$EVENT_NAME" == "workflow_dispatch" ]]; then
           images+=("$IMAGE_GHCR")
           [[ "$PUSH_DOCKERHUB" == "true" ]] && images+=("$IMAGE_DOCKERHUB")
 
@@ -72,7 +75,7 @@ runs:
             tags+=("${major}.${minor}${SUFFIX}")
             tags+=("${major}${SUFFIX}")
           else
-            echo "Unsupported ref for push event: $GIT_REF" >&2
+            echo "Unsupported ref for $EVENT_NAME event: $GIT_REF" >&2
             exit 1
           fi
         elif [[ "$EVENT_NAME" == "pull_request_target" ]]; then
