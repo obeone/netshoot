@@ -4,8 +4,17 @@
 # "Release PR" that accumulates changelog entries and computes the next
 # SemVer version from conventional commits. When the Release PR is
 # merged, release-please creates a git tag (vX.Y.Z) and a GitHub
-# Release. The existing build-and-publish workflow then triggers on the
-# new tag to build and push Docker images.
+# Release.
+#
+# Note: the tag is pushed with the default GITHUB_TOKEN, and GitHub does
+# not start new workflow runs for events created by that token. So the
+# tag does NOT trigger build-and-publish on its own. Publish the SemVer
+# image tags by dispatching that workflow on the tag:
+#
+#   gh workflow run build-and-publish.yaml --ref vX.Y.Z
+#
+# Wiring this automatically requires a PAT or GitHub App token in the
+# release-please step below, which is a deliberate trade-off left open.
 
 name: Release Please
 
