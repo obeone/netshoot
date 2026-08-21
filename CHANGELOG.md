@@ -1,5 +1,17 @@
 # Changelog
 
+## [1.2.1](https://github.com/obeone/netshoot/compare/v1.2.0...v1.2.1) (2026-08-21)
+
+
+### Documentation
+
+* **release:** document that the release tag does not trigger the build ([b455e61](https://github.com/obeone/netshoot/commit/b455e617c492e27ff3ee0532e6a12a850200f832))
+
+
+### CI/CD
+
+* **release:** publish images automatically after a release ([#18](https://github.com/obeone/netshoot/issues/18)) ([2f0400c](https://github.com/obeone/netshoot/commit/2f0400cc85ac83a59e8ec1ffdee2ec4961438985))
+
 ## [1.2.0](https://github.com/obeone/netshoot/compare/v1.1.0...v1.2.0) (2026-08-18)
 
 
