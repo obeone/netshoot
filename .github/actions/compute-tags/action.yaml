@@ -78,7 +78,7 @@ runs:
             echo "Unsupported ref for ${EVENT_NAME} event: $GIT_REF" >&2
             exit 1
           fi
-        elif [[ "$EVENT_NAME" == "pull_request_target" ]]; then
+        elif [[ "$EVENT_NAME" == "pull_request" ]]; then
           images+=("$IMAGE_GHCR")
           tags+=("pr-${PR_NUMBER}${SUFFIX}")
         else
