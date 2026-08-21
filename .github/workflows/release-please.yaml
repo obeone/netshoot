@@ -4,17 +4,14 @@
 # "Release PR" that accumulates changelog entries and computes the next
 # SemVer version from conventional commits. When the Release PR is
 # merged, release-please creates a git tag (vX.Y.Z) and a GitHub
-# Release.
+# Release, then dispatches build-and-publish on that tag so the SemVer
+# image tags get published.
 #
-# Note: the tag is pushed with the default GITHUB_TOKEN, and GitHub does
-# not start new workflow runs for events created by that token. So the
-# tag does NOT trigger build-and-publish on its own. Publish the SemVer
-# image tags by dispatching that workflow on the tag:
-#
-#   gh workflow run build-and-publish.yaml --ref vX.Y.Z
-#
-# Wiring this automatically requires a PAT or GitHub App token in the
-# release-please step below, which is a deliberate trade-off left open.
+# The dispatch is explicit on purpose: the tag is pushed with the default
+# GITHUB_TOKEN, and GitHub does not start workflow runs for events created
+# by that token, so the tag alone triggers nothing. workflow_dispatch is
+# one of the two documented exceptions to that rule, which is why this
+# needs no PAT or GitHub App token.
 
 name: Release Please
 
@@ -26,13 +23,30 @@ on:
 permissions:
   contents: write
   pull-requests: write
+  actions: write  # required to dispatch build-and-publish below
 
 jobs:
   release-please:
     runs-on: ubuntu-latest
     steps:
       - name: Run release-please
+        id: release
         uses: googleapis/release-please-action@v4
         with:
           config-file: release-please-config.json
           manifest-file: .release-please-manifest.json
+
+      # Only fires on the push that merges a Release PR, which is the one
+      # push where release-please actually cuts a tag. This job has no
+      # checkout, so gh cannot infer the repository and needs GH_REPO.
+      - name: Publish images for the new tag
+        if: steps.release.outputs.release_created == 'true'
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          TAG: ${{ steps.release.outputs.tag_name }}
+        run: |
+          set -euo pipefail
+          echo "Dispatching build-and-publish on ${TAG}"
+          gh workflow run build-and-publish.yaml --ref "${TAG}"

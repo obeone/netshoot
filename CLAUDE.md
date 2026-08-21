@@ -118,13 +118,15 @@ This project uses [release-please](https://github.com/googleapis/release-please)
 1. Every push to `main` triggers the `release-please` workflow
 2. release-please analyzes commits since the last release and creates/updates a "Release PR" with a computed version bump and changelog
 3. When the Release PR is merged, release-please creates a git tag (`vX.Y.Z`) and a GitHub Release
-4. The build-and-publish workflow must then be dispatched manually on the tag to publish the SemVer-tagged Docker images:
+4. The same workflow then dispatches build-and-publish on the new tag, which publishes the SemVer-tagged Docker images
+
+That dispatch is explicit because the tag alone starts nothing: release-please pushes it with the default `GITHUB_TOKEN`, and GitHub does not start new workflow runs for events created by that token. `workflow_dispatch` is one of the two exceptions to that rule, so no PAT is involved. Floating tags are unaffected, they are published by the push to `main`.
+
+To publish a tag by hand (an older tag, or a release whose dispatch failed):
 
 ```bash
 gh workflow run build-and-publish.yaml --ref vX.Y.Z
 ```
-
-The tag alone does not start that workflow: release-please pushes it with the default `GITHUB_TOKEN`, and GitHub does not start new workflow runs for events created by that token. Floating tags are unaffected, they are published by the push to `main`.
 
 ### Version bump policy
 
@@ -132,8 +134,10 @@ The tag alone does not start that workflow: release-please pushes it with the de
 |---|---|---|
 | `feat` | **minor** bump | New tool, new image variant |
 | `fix`, `perf` | **patch** bump | Bug fix, performance improvement |
-| `docs`, `ci`, `chore`, `style`, `refactor`, `build`, `test` | changelog only (no bump) | Documentation, CI, maintenance |
+| `docs`, `ci`, `chore`, `style`, `refactor`, `build`, `test` | **patch** bump, in its own changelog section | Documentation, CI, maintenance |
 | `BREAKING CHANGE` footer or `!` after type (e.g., `feat!:`) | **major** bump | Base image change, tool removal, entrypoint change |
+
+Every conventional type is declared as a visible section in `release-please-config.json`, and release-please counts a visible section as a releasable unit. So any conventional commit is enough to cut a patch release, including a CI or docs one. To make a type neither bump the version nor show up in the changelog, mark its section `"hidden": true`.
 
 ### Configuration files
 
@@ -142,7 +146,7 @@ The tag alone does not start that workflow: release-please pushes it with the de
 
 ### Creating a release
 
-Do not create tags manually. Merge the release-please PR on GitHub to trigger a release. The PR title and body show the computed version and changelog before merging. Then dispatch build-and-publish on the new tag as described above.
+Do not create tags manually. Merge the release-please PR on GitHub to trigger a release. The PR title and body show the computed version and changelog before merging. The images are then built and pushed without further action.
 
 ## CI/CD
 
