@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.2.2](https://github.com/obeone/netshoot/compare/v1.2.1...v1.2.2) (2026-08-29)
+
+
+### Miscellaneous
+
+* **deps:** add Dependabot configuration ([#19](https://github.com/obeone/netshoot/issues/19)) ([cc69293](https://github.com/obeone/netshoot/commit/cc692934597e15a5fe1eab91f5724bdc8897d669))
+
 ## [1.2.1](https://github.com/obeone/netshoot/compare/v1.2.0...v1.2.1) (2026-08-21)
 
 
