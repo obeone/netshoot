@@ -95,7 +95,8 @@ Additionally, `uv` is copied directly from `ghcr.io/astral-sh/uv:latest`, and `c
 ### Configuration Files
 
 - `configs/zshrc` — Zsh configuration with Oh My Zsh setup
-- `configs/p10k.zsh` — Powerlevel10k theme configuration
+- `configs/p10k.zsh` — Powerlevel10k theme configuration (requires Nerd Font)
+- `configs/p10k-ascii.zsh` — Powerlevel10k ASCII overrides (loaded by default; skipped when `NETSHOOT_NERDFONT=1`)
 - `configs/podman-storage.conf` — Podman storage config for rootless operation
 - `tools/transfer.sh` — File transfer helper script (installed to `/usr/local/bin/transfer.sh`)
 - `entrypoint-containerd.sh` — Entrypoint for containerd variant (starts containerd daemon, then exec's the user command)

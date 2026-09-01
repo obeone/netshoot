@@ -181,5 +181,10 @@ fi
 # Ignore bracketed paste for autosuggestions to prevent issues
 ZSH_AUTOSUGGEST_IGNORE_WIDGETS+=(bracketed-paste)
 
-# Load Powerlevel10k prompt
+# Load Powerlevel10k prompt.
+# Default: plain Unicode prompt (works in any terminal).
+# Set NETSHOOT_NERDFONT=1 to enable Nerd Font glyphs (powerline, icons).
 [[ ! -f ~/.p10k.zsh ]] || source ~/.p10k.zsh
+if [[ -z "$NETSHOOT_NERDFONT" && -f ~/.p10k-ascii.zsh ]]; then
+  source ~/.p10k-ascii.zsh
+fi
