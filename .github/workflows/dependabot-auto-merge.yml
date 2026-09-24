@@ -20,10 +20,18 @@ jobs:
         with:
           github-token: "${{ secrets.GITHUB_TOKEN }}"
 
+      # Docker image bumps (the pinned debian and uv FROM lines) are never
+      # auto-merged: build-and-publish does not build Dependabot PRs (the
+      # gatekeeper does not trust the bot), so the smoke test would not run
+      # before the new image reaches the floating tags. A maintainer merges
+      # them by hand: approve, re-run the build-and-publish run of the PR (the
+      # approval lets the gatekeeper through), then merge once it is green.
       - name: Approve and enable auto-merge for patch/minor updates
         if: |
-          steps.metadata.outputs.update-type == 'version-update:semver-patch' ||
-          steps.metadata.outputs.update-type == 'version-update:semver-minor'
+          steps.metadata.outputs.package-ecosystem != 'docker' && (
+            steps.metadata.outputs.update-type == 'version-update:semver-patch' ||
+            steps.metadata.outputs.update-type == 'version-update:semver-minor'
+          )
         run: |
           gh pr review --approve "$PR_URL"
           gh pr merge --auto --squash "$PR_URL"
