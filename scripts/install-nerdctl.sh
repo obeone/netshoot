@@ -7,52 +7,66 @@
 #   install-nerdctl.sh full     # nerdctl-full (includes containerd)
 #
 # Expected environment variables:
-#   TARGETARCH  - Docker build architecture (amd64, arm64, arm)
+#   TARGETARCH       - Docker build architecture (amd64, arm64, arm)
+#   NERDCTL_VERSION  - Optional release tag to install (e.g. v2.4.0 or 2.4.0).
+#                      Empty or unset installs the latest release.
+#   GITHUB_TOKEN     - Optional, see lib.sh.
 #
-# This script is called from a Dockerfile RUN instruction with a cache mount
-# on /tmp/nerdctl.
+# This script is run from a bind mount of scripts/ in a Dockerfile RUN
+# instruction, with a cache mount on /tmp/nerdctl.
 
-set -eux
+set -euxo pipefail
 
+# shellcheck source-path=SCRIPTDIR source=lib.sh disable=SC1091
+. "$(dirname "$0")/lib.sh"
+
+REPO="containerd/nerdctl"
+CACHE_DIR="/tmp/nerdctl"
 VARIANT="${1:?Usage: install-nerdctl.sh <client|full>}"
 
 # Detect architecture for GitHub release URL
-case "$TARGETARCH" in
+case "${TARGETARCH:-}" in
     amd64) ARCH=amd64 ;;
     arm64) ARCH=arm64 ;;
     arm)   ARCH=arm-v7 ;;
-    *) echo "Unsupported architecture: $TARGETARCH" >&2 && exit 1 ;;
+    *) die "Unsupported architecture: '${TARGETARCH:-}'" ;;
 esac
 
 # Determine filename prefix based on variant
 case "$VARIANT" in
     client) PREFIX="nerdctl" ;;
     full)   PREFIX="nerdctl-full" ;;
-    *) echo "Unknown variant: $VARIANT (expected 'client' or 'full')" >&2 && exit 1 ;;
+    *) die "Unknown variant: $VARIANT (expected 'client' or 'full')" ;;
 esac
 
-# Fetch the latest release tag from the GitHub API
-TAG=$(curl -fsSL https://api.github.com/repos/containerd/nerdctl/releases/latest | \
-    jq -r .tag_name)
+TAG=$(resolve_version "${NERDCTL_VERSION:-}" "$REPO")
+TAG="v${TAG#v}"
 
 FILE="${PREFIX}-${TAG#v}-linux-${ARCH}.tar.gz"
-URL="https://github.com/containerd/nerdctl/releases/download/${TAG}/${FILE}"
-CHECKSUM_URL="https://github.com/containerd/nerdctl/releases/download/${TAG}/SHA256SUMS"
-ARCHIVE="/tmp/nerdctl/$FILE"
+BASE_URL="https://github.com/${REPO}/releases/download/${TAG}"
+ARCHIVE="${CACHE_DIR}/${FILE}"
+# SHA256SUMS is not versioned upstream: suffix the cached copy with the tag.
+SUMS="${CACHE_DIR}/SHA256SUMS-${TAG}"
 
-# Download the archive and checksums if not cached
-if [ ! -f "$ARCHIVE" ]; then
-    echo "Downloading ${PREFIX} ${TAG} from $URL"
-    curl -fsSL "$URL" -o "$ARCHIVE"
-    curl -fsSL "$CHECKSUM_URL" -o "/tmp/nerdctl/SHA256SUMS"
+mkdir -p "$CACHE_DIR"
+fetch "${BASE_URL}/SHA256SUMS" "$SUMS"
+fetch "${BASE_URL}/${FILE}" "$ARCHIVE"
+verify_sha256 "$ARCHIVE" "$SUMS" "$FILE"
+
+# The two archives are laid out differently:
+#   client: nerdctl and the containerd-rootless*.sh helpers at the archive
+#           root, so they go to /usr/local/bin (extracting into /usr/local
+#           would leave nerdctl off the PATH).
+#   full:   a /usr/local-style tree (bin/, lib/, libexec/, share/ ...).
+# Files are owned by root regardless of the ownership recorded in the archive.
+case "$VARIANT" in
+    client) DEST=/usr/local/bin ;;
+    full)   DEST=/usr/local ;;
+esac
+tar -xzf "$ARCHIVE" -C "$DEST" --no-same-owner
+
+# Verify installation
+nerdctl --version
+if [[ "$VARIANT" == "full" ]]; then
+    containerd --version
 fi
-
-# Verify checksum
-if ! grep -q "$FILE" /tmp/nerdctl/SHA256SUMS; then
-    echo "ERROR: Checksum for $FILE not found in SHA256SUMS" >&2
-    exit 1
-fi
-cd /tmp/nerdctl && grep "$FILE" SHA256SUMS | sha256sum -c -
-
-# Extract the archive
-tar Cxzvf /usr/local "$ARCHIVE"

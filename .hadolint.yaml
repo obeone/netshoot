@@ -1,0 +1,19 @@
+# hadolint configuration, used by .github/workflows/lint.yaml
+# (hadolint --config .hadolint.yaml Dockerfile Dockerfile.slim).
+#
+# No rule is ignored globally: the Dockerfiles carry inline
+# `# hadolint ignore=<rule>` comments, each with its justification, right
+# above the instruction they apply to (apt version pins that would fight the
+# weekly rebuild, literal zsh code written in single quotes...). Keep it that
+# way so that a new instruction is always checked against every rule.
+#
+# hadolint 2.14 or later is needed: 2.12 cannot parse
+# `--mount=type=secret,id=...,env=...`.
+
+# Fail on anything, down to info level (hadolint's default, made explicit).
+failure-threshold: info
+
+# Registries the Dockerfiles may pull from (FROM lines, and COPY --from).
+trustedRegistries:
+  - docker.io
+  - ghcr.io

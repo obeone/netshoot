@@ -44,7 +44,6 @@ RED='\e[31m'
 GREEN='\e[32m'
 YELLOW='\e[33m'
 BLUE='\e[34m'
-MAGENTA='\e[35m'
 CYAN='\e[36m'
 RESET='\e[0m'
 BOLD='\e[1m'
@@ -290,7 +289,7 @@ send_file_or_directory() {
     if [[ "$request_confirmation" == "true" ]]; then
         echo -e "${CYAN}You are about to upload:${RESET}"
         for item in "$@"; do echo -e "  ${BLUE}- $(basename "$item")${RESET}"; done
-        read -p $'\e[1;35mProceed? (Y/n): \e[0m' confirm
+        read -r -p $'\e[1;35mProceed? (Y/n): \e[0m' confirm
         [[ "${confirm:-y}" =~ ^[Yy]$ ]] || {
             log "INFO" "Upload cancelled."
             return 0
@@ -323,8 +322,7 @@ send_file_or_directory() {
     if [ -n "$encryption_key" ]; then
         log "INFO" "Encrypting file..."
         local encrypted_file
-        encrypted_file=$(encrypt_file "$temp_file" "$encryption_key")
-        if [[ $? -ne 0 ]]; then
+        if ! encrypted_file=$(encrypt_file "$temp_file" "$encryption_key"); then
             log "ERROR" "Encryption failed."
             [ "$should_zip" = true ] && rm "$temp_file"
             return 1
@@ -455,7 +453,7 @@ receive_file_or_directory() {
 
     # --- Unzip ---
     if [[ "$offer_unzip" == "true" ]] && [[ "$final_path" == *.zip ]]; then
-        read -p $'\e[1;35mUnzip the downloaded file? (Y/n): \e[0m' confirm_unzip
+        read -r -p $'\e[1;35mUnzip the downloaded file? (Y/n): \e[0m' confirm_unzip
         if [[ "${confirm_unzip:-y}" =~ ^[Yy]$ ]]; then
             unzip "$final_path" -d "$destination"
             rm "$final_path"

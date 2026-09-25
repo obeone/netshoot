@@ -39,6 +39,15 @@ PLATFORMS="linux/amd64,linux/arm64"
 #   --builder=<builder> | -b <builder> Specify the Docker buildx builder to use.
 #                                     Defaults to "cloud-obeoneorg-cloud".
 #   --no-cache                        Disable the use of registry cache.
+#
+# Environment:
+#   GITHUB_TOKEN  Optional. When set, it is passed to the build as the
+#                 "github_token" secret, which the install scripts use to query
+#                 the GitHub API instead of the anonymous releases redirect.
+#                 It never ends up in the image or its build history.
+#   CACHE_BUST    Optional. Defaults to the current ISO week (e.g. 2026-W39),
+#                 so the apt full-upgrade layer and everything after it are
+#                 rebuilt once a week. Set it to force a refresh.
 while [[ $# -gt 0 ]]; do
     case $1 in
         --target=*)
@@ -81,12 +90,26 @@ done
 # Build Configuration
 # ------------------------------------------------------------------------------
 
+# Weekly refresh: the Dockerfiles reference CACHE_BUST in their apt
+# full-upgrade step, so a new ISO week invalidates that layer and everything
+# after it while keeping the cache within a week.
+CACHE_BUST="${CACHE_BUST:-$(date -u +%G-W%V)}"
+
 # Base arguments for all docker buildx build commands.
 BASE_ARGS=(
     --builder "$BUILDER"
     --platform "$PLATFORMS"
     --push
+    --build-arg "CACHE_BUST=${CACHE_BUST}"
 )
+echo "INFO: CACHE_BUST=${CACHE_BUST}"
+
+# Optional GitHub token for the install scripts, passed as a BuildKit secret
+# read from the environment (the value is never put on the command line).
+if [[ -n "${GITHUB_TOKEN:-}" ]]; then
+    BASE_ARGS+=(--secret "id=github_token,env=GITHUB_TOKEN")
+    echo "INFO: GITHUB_TOKEN is set, passing it as the github_token build secret."
+fi
 
 # Cache configuration note.
 #
@@ -188,7 +211,9 @@ build_type() {
         exit 1
     fi
 
-    local type_targets=(${TARGETS[$type]})
+    # Split the whitespace-separated entries (they contain no glob characters).
+    local type_targets=()
+    read -r -d '' -a type_targets <<< "${TARGETS[$type]}" || true
 
     if [[ -n "$TARGET_ARG" ]]; then
         # Build a specific target if provided.

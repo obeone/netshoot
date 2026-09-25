@@ -1,0 +1,107 @@
+# Static checks for the repository.
+#
+# - shellcheck: every shell script (build.sh, entrypoint-containerd.sh,
+#   tools/transfer.sh, scripts/*.sh, tests/*.sh). scripts/lib.sh is sourced by
+#   the install scripts, which point shellcheck at it with a source directive.
+# - hadolint: Dockerfile and Dockerfile.slim, with the rules in .hadolint.yaml.
+#   hadolint 2.12 cannot parse `--mount=type=secret,...,env=...`; 2.14 can.
+# - actionlint: every workflow; it also runs shellcheck on the `run:` blocks.
+#
+# The linters are downloaded as pinned release binaries and verified against
+# the SHA256 below. To bump one, change its version and hash (the hash of the
+# linux x86_64 asset, from the release's checksum file where upstream
+# publishes one).
+#
+# All checks run even if an earlier one fails, so a single run reports
+# everything.
+
+name: Lint
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    env:
+      SHELLCHECK_VERSION: v0.11.0
+      SHELLCHECK_SHA256: 8c3be12b05d5c177a04c29e3c78ce89ac86f1595681cab149b65b97c4e227198
+      HADOLINT_VERSION: v2.14.0
+      HADOLINT_SHA256: 6bf226944684f56c84dd014e8b979d27425c0148f61b3bd99bcc6f39e9dc5a47
+      ACTIONLINT_VERSION: 1.7.12
+      ACTIONLINT_SHA256: 8aca8db96f1b94770f1b0d72b6dddcb1ebb8123cb3712530b08cc387b349a3d8
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Install linters
+        id: install
+        shell: bash
+        run: |
+          set -euo pipefail
+          bin="${RUNNER_TEMP}/lint-bin"
+          dl="${RUNNER_TEMP}/lint-dl"
+          mkdir -p "$bin" "$dl"
+
+          fetch() { # fetch <url> <dest> <sha256>
+            curl -fsSL --retry 3 --retry-connrefused -o "$2" "$1"
+            echo "$3  $2" | sha256sum -c -
+          }
+
+          fetch "https://github.com/koalaman/shellcheck/releases/download/${SHELLCHECK_VERSION}/shellcheck-${SHELLCHECK_VERSION}.linux.x86_64.tar.xz" \
+            "${dl}/shellcheck.tar.xz" "$SHELLCHECK_SHA256"
+          tar -xJf "${dl}/shellcheck.tar.xz" -C "$dl"
+          install -m 755 "${dl}/shellcheck-${SHELLCHECK_VERSION}/shellcheck" "${bin}/shellcheck"
+
+          fetch "https://github.com/hadolint/hadolint/releases/download/${HADOLINT_VERSION}/hadolint-Linux-x86_64" \
+            "${dl}/hadolint" "$HADOLINT_SHA256"
+          install -m 755 "${dl}/hadolint" "${bin}/hadolint"
+
+          fetch "https://github.com/rhysd/actionlint/releases/download/v${ACTIONLINT_VERSION}/actionlint_${ACTIONLINT_VERSION}_linux_amd64.tar.gz" \
+            "${dl}/actionlint.tar.gz" "$ACTIONLINT_SHA256"
+          tar -xzf "${dl}/actionlint.tar.gz" -C "$dl" actionlint
+          install -m 755 "${dl}/actionlint" "${bin}/actionlint"
+
+          # Put the pinned binaries first so actionlint uses this shellcheck too.
+          echo "$bin" >> "$GITHUB_PATH"
+
+      - name: shellcheck
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          shellcheck --version
+          shellcheck --external-sources --source-path=SCRIPTDIR \
+            build.sh \
+            entrypoint-containerd.sh \
+            tools/transfer.sh \
+            scripts/*.sh \
+            tests/*.sh
+
+      - name: hadolint
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          hadolint --version
+          hadolint --config .hadolint.yaml Dockerfile Dockerfile.slim
+
+      - name: actionlint
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          actionlint -version
+          actionlint -color
