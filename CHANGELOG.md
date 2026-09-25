@@ -1,5 +1,36 @@
 # Changelog
 
+## [2.0.0](https://github.com/obeone/netshoot/compare/v1.2.1...v2.0.0) (2026-09-25)
+
+
+### ⚠ BREAKING CHANGES
+
+* **image:** the docker variant ships the Docker CLI only (no dockerd, mount the host socket). dstat, sudo, nfs-common, python3-pip and bind9-utils are removed. The zsh configuration and Oh My Zsh moved out of /root; a custom ~/.zshrc must use ZSH=/opt/oh-my-zsh.
+
+### Features
+
+* **image:** pin inputs, verify downloads, add tools and support non-root shells ([9c566d1](https://github.com/obeone/netshoot/commit/9c566d1aabf36419c2a9183e8003f71429ed0d21))
+
+
+### Documentation
+
+* document new tools, variants, non-root usage and CI ([0fe0690](https://github.com/obeone/netshoot/commit/0fe06905e5267a421e595853b3002db729b8dcb3))
+
+
+### CI/CD
+
+* add smoke tests, lint workflow, weekly rebuild and attestations ([b7fdefa](https://github.com/obeone/netshoot/commit/b7fdefa60a3f23d283bad4274335414f34bc1f70))
+
+
+### Miscellaneous
+
+* **deps:** add Dependabot configuration ([#19](https://github.com/obeone/netshoot/issues/19)) ([cc69293](https://github.com/obeone/netshoot/commit/cc692934597e15a5fe1eab91f5724bdc8897d669))
+
+
+### Style
+
+* **transfer:** fix shellcheck warnings ([18799bc](https://github.com/obeone/netshoot/commit/18799bc371b5b7b3075b81f88aece028c4b621db))
+
 ## [1.2.1](https://github.com/obeone/netshoot/compare/v1.2.0...v1.2.1) (2026-08-21)
 
 
