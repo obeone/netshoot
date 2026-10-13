@@ -109,7 +109,6 @@ RUN --mount=type=cache,target=/var/cache/apt,id=apt-cache-${TARGETARCH},sharing=
         jq
         kitty-terminfo
         lsof
-        magic-wormhole
         ncdu
         python3-venv
         rsync
@@ -117,6 +116,7 @@ RUN --mount=type=cache,target=/var/cache/apt,id=apt-cache-${TARGETARCH},sharing=
         sysstat
         thefuck
         tmux
+        wormhole-rs
     )
 
     # Networking tools
@@ -179,6 +179,10 @@ RUN --mount=type=cache,target=/var/cache/apt,id=apt-cache-${TARGETARCH},sharing=
         "${CORE_TOOLS[@]}" \
         "${SYSTEM_TOOLS[@]}" \
         "${NETWORKING_TOOLS[@]}"
+
+    # wormhole-rs replaces the Python magic-wormhole (and its Twisted stack);
+    # keep the usual `wormhole` command name. Same send/receive protocol.
+    ln -s /usr/bin/wormhole-rs /usr/local/bin/wormhole
 EOT
 
 # Install official Ookla speedtest CLI.

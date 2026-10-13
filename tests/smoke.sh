@@ -65,7 +65,7 @@ FULL_PRESENT=(
     # System
     btop htop iotop iostat lsof strace ncdu rsync file
     # Shell, editors and utilities
-    zsh bash tmux vim less man git jq fzf thefuck wormhole
+    zsh bash tmux vim less man git jq fzf thefuck wormhole wormhole-rs
     gpg openssl unzip zip python3 uv uvx transfer.sh
 )
 # Removed from the full image on purpose. pip/pip3 are not listed: python3-pip

@@ -244,7 +244,7 @@ organized by category:
 | HTTP/HTTPS | curl, wget, httpie, apache2-utils (ab) |
 | WebSocket | websocat |
 | Remote Access | openssh-client, telnet |
-| Data Transfer | socat, rsync, magic-wormhole |
+| Data Transfer | socat, rsync, wormhole-rs (as `wormhole`) |
 | VPN | wireguard-tools |
 | SMTP Testing | swaks |
 | LDAP | ldap-utils (ldapsearch, ldapwhoami, ...) |
@@ -322,9 +322,10 @@ wireguard-tools
 
 **System**: bash, btop, ca-certificates, coreutils,
 file, fzf, git, gnupg, htop, iotop, jq,
-kitty-terminfo, less, lsof, magic-wormhole, man-db,
+kitty-terminfo, less, lsof, man-db,
 ncdu, openssl, procps, python3-venv, rsync, strace,
-sysstat, thefuck, tmux, unzip, util-linux, vim, zip,
+sysstat, thefuck, tmux, unzip, util-linux, vim,
+wormhole-rs, zip,
 zsh
 
 **Upstream releases** (not packaged, or too old, in
