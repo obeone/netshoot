@@ -200,6 +200,17 @@ The `docker` variant ships the client only
 `containerd` in the image. Mount the socket of the
 engine you want to talk to.
 
+When you do need a local engine, `install-dockerd`
+installs `docker-ce` and `containerd.io` on demand
+from the Docker repository already configured in the
+image. Running it needs a privileged container:
+
+```bash
+docker run -it --rm --privileged obeoneorg/netshoot:docker
+install-dockerd --start   # installs, starts dockerd, waits for the socket
+docker run --rm hello-world
+```
+
 ### Pulling Specific Variants
 
 ```bash

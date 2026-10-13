@@ -281,6 +281,10 @@ case "$VARIANT" in
         check "docker compose version" -- 'docker compose version'
         # CLI only: no engine and no containerd in this variant.
         check_binaries absent dockerd containerd
+        # The engine is opt-in through the bundled helper.
+        check "install-dockerd --help" -- 'install-dockerd --help | grep -q -- --start'
+        check "install-dockerd refuses non-root" --user 1000:1000 -- \
+            '! install-dockerd 2>/dev/null'
         ;;
     podman)
         echo

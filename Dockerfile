@@ -350,6 +350,9 @@ RUN --mount=type=cache,target=/var/cache/apt,id=apt-cache-${TARGETARCH},sharing=
         docker-compose-plugin
 EOT
 
+# On-demand engine: `install-dockerd [--start]` installs docker-ce and
+# containerd.io from the repository configured above (needs --privileged to run).
+COPY --link --chmod=755 tools/install-dockerd.sh /usr/local/bin/install-dockerd
 # ==============================================================================
 # Podman Stage: Installs Podman and related tools
 # ==============================================================================

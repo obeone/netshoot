@@ -1,7 +1,7 @@
 # Static checks for the repository.
 #
 # - shellcheck: every shell script (build.sh, entrypoint-containerd.sh,
-#   tools/transfer.sh, scripts/*.sh, tests/*.sh). scripts/lib.sh is sourced by
+#   tools/*.sh, scripts/*.sh, tests/*.sh). scripts/lib.sh is sourced by
 #   the install scripts, which point shellcheck at it with a source directive.
 # - hadolint: Dockerfile and Dockerfile.slim, with the rules in .hadolint.yaml.
 #   hadolint 2.12 cannot parse `--mount=type=secret,...,env=...`; 2.14 can.
@@ -86,7 +86,7 @@ jobs:
           shellcheck --external-sources --source-path=SCRIPTDIR \
             build.sh \
             entrypoint-containerd.sh \
-            tools/transfer.sh \
+            tools/*.sh \
             scripts/*.sh \
             tests/*.sh
 

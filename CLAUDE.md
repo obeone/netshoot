@@ -156,6 +156,7 @@ Version override build args (all default to empty = latest):
 - `configs/p10k.zsh` — Powerlevel10k theme configuration (installed as `/etc/zsh/netshoot/.p10k.zsh`)
 - `configs/podman-storage.conf` — Podman storage config for rootless operation
 - `tools/transfer.sh` — File transfer helper script (installed to `/usr/local/bin/transfer.sh`)
+- `tools/install-dockerd.sh`: docker variant only, installed as `/usr/local/bin/install-dockerd`: installs `docker-ce` + `containerd.io` on demand from the already configured Docker apt repo; `--start` launches dockerd and waits for it (needs `--privileged`)
 - `configs/dpkg-excludes`: dpkg path-exclude rules (docs and translations), see Key Design Patterns
 - `entrypoint-containerd.sh` — Entrypoint for containerd variant (starts containerd daemon, then exec's the user command)
 
@@ -271,10 +272,10 @@ The CI workflow uses `type=gha` (GitHub Actions cache, `scope=buildkit-<variant>
 There is no `make`, `npm`, or test runner; the checks are plain scripts and CI workflows.
 
 - **Smoke test**: `tests/smoke.sh <variant> <image>` (variants: `base`, `slim`, `docker`, `podman`, `nerdctl`, `containerd`) runs every check in `docker run --rm --entrypoint /bin/bash <image> -c '...'` (entrypoint overridden so the containerd variant needs no privileges) and reports PASS/FAIL per check, exiting 1 on any failure. It checks: expected binaries present and removed ones (dstat, sudo) absent (pip/pip3 are not checked: `httpie` and `python3-venv` depend on `python3-pip` in trixie, so pip stays installed), per variant; functional checks (grpcurl, witr, doggo, websocat, kubectl, `check-tls --help` as uid 1000, `python3 -m venv`, `man -w tcpdump` on the full image); an interactive zsh as root and as `--user 1000:1000`, both without a terminal and on a `docker run -t` pty (`timeout --foreground -k`), which must print a probe marker proving the bundled config loaded (`ZSH=/opt/oh-my-zsh`, `p10k` defined, `ZSH_COMPDUMP` set), with no error output and no newuser/p10k wizard; variant tools (docker CLI + buildx + compose with `dockerd` absent, podman, nerdctl, containerd + nerdctl). Run it on a locally built image; CI runs it for every variant before pushing.
-- **Lint** (`.github/workflows/lint.yaml`, on `pull_request` and push to `main`, `contents: read`): shellcheck on `build.sh`, `entrypoint-containerd.sh`, `tools/transfer.sh`, `scripts/*.sh` and `tests/*.sh` (`scripts/lib.sh` is sourced, the install scripts point shellcheck at it with a `source` directive); hadolint on `Dockerfile` and `Dockerfile.slim` with `.hadolint.yaml` (it ignores no rule globally: rules are ignored inline with `# hadolint ignore=<rule>` above the instruction, with a justification comment); actionlint on the workflows. Linter binaries are pinned by version and SHA256 in the workflow.
+- **Lint** (`.github/workflows/lint.yaml`, on `pull_request` and push to `main`, `contents: read`): shellcheck on `build.sh`, `entrypoint-containerd.sh`, `tools/*.sh`, `scripts/*.sh` and `tests/*.sh` (`scripts/lib.sh` is sourced, the install scripts point shellcheck at it with a `source` directive); hadolint on `Dockerfile` and `Dockerfile.slim` with `.hadolint.yaml` (it ignores no rule globally: rules are ignored inline with `# hadolint ignore=<rule>` above the instruction, with a justification comment); actionlint on the workflows. Linter binaries are pinned by version and SHA256 in the workflow.
 - README.md must stay markdownlint-clean per `.markdownlint.json` (80-column lines outside code blocks and tables).
 
-All shell scripts (`build.sh`, `entrypoint-containerd.sh`, `tools/transfer.sh`, `scripts/*.sh`, `tests/*.sh`) use `bash` and must pass shellcheck.
+All shell scripts (`build.sh`, `entrypoint-containerd.sh`, `tools/*.sh`, `scripts/*.sh`, `tests/*.sh`) use `bash` and must pass shellcheck.
 
 ## Development Notes
 
