@@ -137,6 +137,7 @@ Version override build args (all default to empty = latest):
 - **gitstatus binary persistence**: The Powerlevel10k gitstatus install uses `GITSTATUS_CACHE_DIR=$ZSH/custom/themes/powerlevel10k/gitstatus/usrbin`, a path *outside* the `/root/.cache` cache mount. Without this, the compiled binary would live only in the cache mount and be absent from the final image layer.
 - **Locale**: `LANG=C.UTF-8`, the only UTF-8 locale built into Debian without the `locales` package (`en_US.UTF-8` is not generated, and `man` complained about it on every call).
 - **man pages**: `man-db` is installed in the full image. Before the install, any dpkg `path-exclude=/usr/share/man` rule in `/etc/dpkg/dpkg.cfg.d/` is removed so pages actually land (the pinned image has none today; it is a guard).
+- **dpkg excludes**: `configs/dpkg-excludes` is copied to `/etc/dpkg/dpkg.cfg.d/netshoot-excludes` in both Dockerfiles before any apt step, so `/usr/share/doc` (except `copyright`) and `/usr/share/locale` are skipped. Man pages are not excluded. Use `mtr-tiny`, never `mtr` (GTK build): the smoke test fails if `libgtk-3-0t64` is installed.
 
 ### Shell Layout (works for root and any uid)
 
@@ -155,6 +156,7 @@ Version override build args (all default to empty = latest):
 - `configs/p10k.zsh` — Powerlevel10k theme configuration (installed as `/etc/zsh/netshoot/.p10k.zsh`)
 - `configs/podman-storage.conf` — Podman storage config for rootless operation
 - `tools/transfer.sh` — File transfer helper script (installed to `/usr/local/bin/transfer.sh`)
+- `configs/dpkg-excludes`: dpkg path-exclude rules (docs and translations), see Key Design Patterns
 - `entrypoint-containerd.sh` — Entrypoint for containerd variant (starts containerd daemon, then exec's the user command)
 
 ### Installation Scripts

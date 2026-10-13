@@ -48,6 +48,11 @@ RUN <<EOT
     echo 'Binary::apt::APT::Keep-Downloaded-Packages "true";' > /etc/apt/apt.conf.d/keep-cache
 EOT
 
+# Do not install package docs and message translations (~150 MB): nobody reads
+# /usr/share/doc in a debug container. Copyright files stay for license
+# compliance. Man pages are kept on purpose (man-db is installed below).
+COPY --link configs/dpkg-excludes /etc/dpkg/dpkg.cfg.d/netshoot-excludes
+
 # Upgrade all packages to their latest versions.
 # Uses BuildKit cache mounts with sharing=locked for parallel builds safety.
 # CACHE_BUST (the ISO week, passed by CI and build.sh) invalidates this layer
@@ -139,7 +144,7 @@ RUN --mount=type=cache,target=/var/cache/apt,id=apt-cache-${TARGETARCH},sharing=
         ipvsadm
         ldap-utils
         masscan
-        mtr
+        mtr-tiny
         net-tools
         netcat-openbsd
         nethogs

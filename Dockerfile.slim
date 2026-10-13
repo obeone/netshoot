@@ -41,6 +41,10 @@ RUN <<EOT
     echo 'Binary::apt::APT::Keep-Downloaded-Packages "true";' > /etc/apt/apt.conf.d/keep-cache
 EOT
 
+# Do not install package docs and message translations; copyright files stay
+# for license compliance. Same rules as the full image.
+COPY --link configs/dpkg-excludes /etc/dpkg/dpkg.cfg.d/netshoot-excludes
+
 # Upgrade all packages to their latest versions.
 # Uses BuildKit cache mounts with sharing=locked for parallel builds safety.
 # CACHE_BUST (the ISO week, passed by CI and build.sh) invalidates this layer
@@ -74,7 +78,7 @@ RUN --mount=type=cache,target=/var/cache/apt,id=apt-cache-${TARGETARCH},sharing=
         iproute2
         iputils-ping
         iputils-tracepath
-        mtr
+        mtr-tiny
         net-tools
         netcat-openbsd
         nmap

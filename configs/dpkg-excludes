@@ -1,0 +1,6 @@
+# Netshoot: skip package docs and message translations to keep the image small.
+# Man pages are deliberately NOT excluded (man-db is part of the toolset).
+path-exclude=/usr/share/doc/*
+path-include=/usr/share/doc/*/copyright
+path-exclude=/usr/share/locale/*
+path-include=/usr/share/locale/locale.alias

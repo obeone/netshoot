@@ -248,6 +248,16 @@ check "install scripts are not left in the image" -- \
     '! compgen -G "/tmp/install-*.sh" >/dev/null && [[ ! -e /tmp/scripts ]]'
 check "no zsh configuration in /root" -- \
     '[[ ! -e /root/.zshrc && ! -e /root/.p10k.zsh && ! -e /root/.oh-my-zsh ]]'
+# Size guards: the GTK build of mtr drags in a whole desktop stack, and dpkg
+# must skip docs and translations (copyright files excepted). Packages of the
+# debian base image predate the exclude rules, so probe one we install: git.
+check "no GTK in the image (mtr-tiny, not mtr)" -- \
+    '! dpkg -s libgtk-3-0t64 >/dev/null 2>&1'
+# shellcheck disable=SC2016 # expanded inside the container
+check "no package docs or translations (git)" -- \
+    '[[ -f /usr/share/doc/git/copyright ]] &&
+     [[ -z "$(find /usr/share/doc/git -type f ! -name copyright -print -quit)" ]] &&
+     [[ -z "$(find /usr/share/locale -name git.mo -print -quit)" ]]'
 if [[ "$VARIANT" != slim ]]; then
     check "grpcurl --version" -- 'grpcurl --version'
     check "doggo --version" -- 'doggo --version'
