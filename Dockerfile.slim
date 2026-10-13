@@ -194,6 +194,10 @@ COPY --link configs/zshrc /etc/zsh/netshoot/.zshrc
 COPY --link configs/p10k.zsh /etc/zsh/netshoot/.p10k.zsh
 COPY --link --chmod=755 tools/transfer.sh /usr/local/bin/transfer.sh
 
+# Message of the day, printed by the zshrc in name order (slim text and footer).
+COPY --link configs/motd/slim /etc/netshoot/motd.d/10-netshoot
+COPY --link configs/motd/footer /etc/netshoot/motd.d/90-footer
+
 # Set the working directory and default command.
 WORKDIR /root
 CMD ["zsh"]

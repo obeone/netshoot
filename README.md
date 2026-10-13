@@ -211,6 +211,16 @@ install-dockerd --start   # installs, starts dockerd, waits for the socket
 docker run --rm hello-world
 ```
 
+### Message of the Day
+
+Every variant prints a short message when an
+interactive shell starts on a terminal: a few
+example commands and the notes for that variant.
+It shows once per `docker run` or `docker exec`,
+not again in nested shells or tmux panes. Hide it
+with `-e NETSHOOT_NO_MOTD=1`. The fragments live in
+`/etc/netshoot/motd.d/`.
+
 ### Pulling Specific Variants
 
 ```bash

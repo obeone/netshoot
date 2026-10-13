@@ -272,6 +272,21 @@ check_zsh "zsh loads the bundled config as uid 1000" notty --user 1000:1000
 check_zsh "zsh on a tty as root" tty
 check_zsh "zsh on a tty as uid 1000" tty --user 1000:1000
 
+echo
+echo "== Message of the day"
+# script(1) gives zsh a pseudo-terminal, as an interactive docker run -t does.
+# shellcheck disable=SC2016 # expanded inside the container
+motd_count='timeout 60 script -qec "$1" /dev/null | grep -c "Hide this message" || true'
+# shellcheck disable=SC2016 # expanded inside the container
+check "motd shows the ${VARIANT} variant notes on a tty" -- \
+    'timeout 60 script -qec "zsh -ic true" /dev/null | grep -q "Variant   $1:"' "$VARIANT"
+check "motd is shown once, not again in a nested zsh" -- \
+    "[[ \$($motd_count) -eq 1 ]]" 'zsh -ic "zsh -ic true"'
+check "motd is hidden with NETSHOOT_NO_MOTD=1" -e NETSHOOT_NO_MOTD=1 -- \
+    "[[ \$($motd_count) -eq 0 ]]" 'zsh -ic true'
+check "motd is not printed without a terminal" -- \
+    '! zsh -ic true 2>&1 | grep -q "Hide this message"'
+
 case "$VARIANT" in
     docker)
         echo

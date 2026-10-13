@@ -1,0 +1,3 @@
+  Variant   docker: CLI, buildx and compose, no engine
+            Host engine: -v /var/run/docker.sock:/var/run/docker.sock
+            Local engine: install-dockerd --start (needs --privileged)

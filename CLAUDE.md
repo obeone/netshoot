@@ -157,6 +157,7 @@ Version override build args (all default to empty = latest):
 - `configs/podman-storage.conf` — Podman storage config for rootless operation
 - `tools/transfer.sh` — File transfer helper script (installed to `/usr/local/bin/transfer.sh`)
 - `tools/install-dockerd.sh`: docker variant only, installed as `/usr/local/bin/install-dockerd`: installs `docker-ce` + `containerd.io` on demand from the already configured Docker apt repo; `--start` launches dockerd and waits for it (needs `--privileged`)
+- `configs/motd/`: message of the day fragments, copied to `/etc/netshoot/motd.d/` (`10-netshoot` common text, `50-variant` replaced by each variant stage, `90-footer`); `configs/zshrc` prints them before the p10k instant prompt, on a tty only, once per `docker run`/`docker exec` (exported guard `_NETSHOOT_MOTD_SHOWN`), never with `NETSHOOT_NO_MOTD` set
 - `configs/dpkg-excludes`: dpkg path-exclude rules (docs and translations), see Key Design Patterns
 - `entrypoint-containerd.sh` — Entrypoint for containerd variant (starts containerd daemon, then exec's the user command)
 

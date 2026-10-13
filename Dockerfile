@@ -307,6 +307,12 @@ COPY --link configs/zshrc /etc/zsh/netshoot/.zshrc
 COPY --link configs/p10k.zsh /etc/zsh/netshoot/.p10k.zsh
 COPY --link --chmod=755 tools/transfer.sh /usr/local/bin/transfer.sh
 
+# Message of the day, printed by the zshrc in name order. Each variant stage
+# replaces 50-variant with its own notes.
+COPY --link configs/motd/netshoot /etc/netshoot/motd.d/10-netshoot
+COPY --link configs/motd/variant-base /etc/netshoot/motd.d/50-variant
+COPY --link configs/motd/footer /etc/netshoot/motd.d/90-footer
+
 # Set the working directory and default command.
 WORKDIR /root
 CMD ["zsh"]
@@ -353,6 +359,8 @@ EOT
 # On-demand engine: `install-dockerd [--start]` installs docker-ce and
 # containerd.io from the repository configured above (needs --privileged to run).
 COPY --link --chmod=755 tools/install-dockerd.sh /usr/local/bin/install-dockerd
+COPY --link configs/motd/variant-docker /etc/netshoot/motd.d/50-variant
+
 # ==============================================================================
 # Podman Stage: Installs Podman and related tools
 # ==============================================================================
@@ -376,6 +384,7 @@ EOT
 
 # Copy Podman storage configuration file.
 COPY --link configs/podman-storage.conf /root/.config/containers/storage.conf
+COPY --link configs/motd/variant-podman /etc/netshoot/motd.d/50-variant
 
 # ==============================================================================
 # nerdctl Stage: Installs nerdctl (client only version)
@@ -394,6 +403,8 @@ RUN --mount=type=bind,source=scripts,target=/tmp/scripts \
     --mount=type=cache,target=/tmp/nerdctl,id=nerdctl-${TARGETARCH} \
     --mount=type=secret,id=github_token,env=GITHUB_TOKEN \
     bash /tmp/scripts/install-nerdctl.sh client
+
+COPY --link configs/motd/variant-nerdctl /etc/netshoot/motd.d/50-variant
 
 # ==============================================================================
 # Containerd/nerdctl Stage: Installs nerdctl (full version with containerd)
@@ -415,5 +426,6 @@ RUN --mount=type=bind,source=scripts,target=/tmp/scripts \
 
 # Copy the entrypoint script for containerd.
 COPY --link --chmod=755 entrypoint-containerd.sh /entrypoint.sh
+COPY --link configs/motd/variant-containerd /etc/netshoot/motd.d/50-variant
 
 ENTRYPOINT ["/entrypoint.sh"]
