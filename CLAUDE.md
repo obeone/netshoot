@@ -79,13 +79,13 @@ Both Dockerfiles start with a named `uv` stage (`FROM ghcr.io/astral-sh/uv:<ver>
 ```text
 uv (ghcr.io/astral-sh/uv@sha256) ──COPY /uv /uvx──┐
                                                   ▼
-                           debian:trixie@sha256 → base → docker
+                           debian:trixie-slim@sha256 → base → docker
                                                        → podman
                                                        → nerdctl
                                                        → containerd
 ```
 
-The base image is pinned as `debian:trixie@sha256:<digest>` (tag kept so Dependabot bumps the digest), in both Dockerfiles. `.github/workflows/dependabot-auto-merge.yml` never auto-merges docker-ecosystem PRs: the gatekeeper does not build Dependabot PRs, so a maintainer approves, re-runs the build (smoke test) and merges by hand.
+The base image is pinned as `debian:trixie-slim@sha256:<digest>` (the slim variant: no docs, man pages or translations in the base layer) (tag kept so Dependabot bumps the digest), in both Dockerfiles. `.github/workflows/dependabot-auto-merge.yml` never auto-merges docker-ecosystem PRs: the gatekeeper does not build Dependabot PRs, so a maintainer approves, re-runs the build (smoke test) and merges by hand.
 
 - **`base`**: Installs all networking/system tools, the upstream-release binaries, Zsh with Oh My Zsh + Powerlevel10k, plugins, and helper scripts
 - **`docker`**: Docker CLI only (`docker-ce-cli`, `docker-buildx-plugin`, `docker-compose-plugin`) from Docker's official apt repo. No `dockerd`, no `containerd.io`: users mount the host socket (`-v /var/run/docker.sock:/var/run/docker.sock`)
@@ -136,7 +136,7 @@ Version override build args (all default to empty = latest):
 - **Shell**: `SHELL ["/bin/bash", "-o", "pipefail", "-c"]` in the base stage, and heredoc RUN bodies use `set -eux`.
 - **gitstatus binary persistence**: The Powerlevel10k gitstatus install uses `GITSTATUS_CACHE_DIR=$ZSH/custom/themes/powerlevel10k/gitstatus/usrbin`, a path *outside* the `/root/.cache` cache mount. Without this, the compiled binary would live only in the cache mount and be absent from the final image layer.
 - **Locale**: `LANG=C.UTF-8`, the only UTF-8 locale built into Debian without the `locales` package (`en_US.UTF-8` is not generated, and `man` complained about it on every call).
-- **man pages**: `man-db` is installed in the full image. Before the install, any dpkg `path-exclude=/usr/share/man` rule in `/etc/dpkg/dpkg.cfg.d/` is removed so pages actually land (the pinned image has none today; it is a guard).
+- **man pages**: `man-db` is installed in the full image. Before the install, any dpkg `path-exclude /usr/share/man` rule in `/etc/dpkg/dpkg.cfg.d/` is removed so pages actually land. debian:trixie-slim ships one in the space-separated form, so the sed matches both `path-exclude=` and `path-exclude `. Man pages of packages already in the base layer (bash, coreutils...) stay missing.
 - **dpkg excludes**: `configs/dpkg-excludes` is copied to `/etc/dpkg/dpkg.cfg.d/netshoot-excludes` in both Dockerfiles before any apt step, so `/usr/share/doc` (except `copyright`) and `/usr/share/locale` are skipped. Man pages are not excluded. Use `mtr-tiny`, never `mtr` (GTK build): the smoke test fails if `libgtk-3-0t64` is installed.
 
 ### Shell Layout (works for root and any uid)

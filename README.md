@@ -48,7 +48,7 @@ variants extend from a common `base` stage:
 ```mermaid
 flowchart TB
     U["ghcr.io/astral-sh/uv (pinned)"] -. "COPY uv, uvx" .-> B
-    A["debian:trixie (pinned digest)"] --> B["base"]
+    A["debian:trixie-slim (pinned digest)"] --> B["base"]
     B --> C["docker"]
     B --> D["podman"]
     B --> E["nerdctl"]

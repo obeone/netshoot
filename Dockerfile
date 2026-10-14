@@ -21,7 +21,7 @@ FROM ghcr.io/astral-sh/uv:0.12.18@sha256:3adc3706091ce7c2fe595e669628caedd6d9515
 # Base Stage: Debian Trixie with Essential Tools and Shell Enhancements
 # ==============================================================================
 # The tag is kept next to the digest so Dependabot can bump the digest.
-FROM debian:trixie@sha256:9cc080028c43b27d2074d63a5f9caf7166d731494965616c1a6d2827a004585c AS base
+FROM debian:trixie-slim@sha256:a29215f6a35e51e22adffa17f89e9d2ef06214e64a2bad10d765c46aea49f11f AS base
 
 ARG TARGETARCH
 
@@ -75,9 +75,11 @@ RUN --mount=type=cache,target=/var/cache/apt,id=apt-cache-${TARGETARCH},sharing=
     set -eux
 
     # Make sure man pages are not excluded by a dpkg path-exclude rule, so that
-    # man-db has something to index. The pinned debian:trixie image ships no such
-    # rule today: this is a no-op guard in case a future digest adds one.
-    sed -i '\|^path-exclude=/usr/share/man|d' /etc/dpkg/dpkg.cfg.d/*
+    # man-db has something to index. debian:trixie-slim ships such a rule
+    # (`path-exclude /usr/share/man/*`, space-separated); dpkg also accepts the
+    # `=` form, so match both. Man pages of packages already in the base layer
+    # stay missing; every package installed below gets its pages.
+    sed -i -E '\|^path-exclude[= ]/usr/share/man|d' /etc/dpkg/dpkg.cfg.d/*
 
     # Core system tools (rarely change)
     CORE_TOOLS=(
