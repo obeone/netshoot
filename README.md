@@ -48,7 +48,7 @@ variants extend from a common `base` stage:
 ```mermaid
 flowchart TB
     U["ghcr.io/astral-sh/uv (pinned)"] -. "COPY uv, uvx" .-> B
-    A["debian:trixie (pinned digest)"] --> B["base"]
+    A["debian:trixie-slim (pinned digest)"] --> B["base"]
     B --> C["docker"]
     B --> D["podman"]
     B --> E["nerdctl"]
@@ -200,6 +200,27 @@ The `docker` variant ships the client only
 `containerd` in the image. Mount the socket of the
 engine you want to talk to.
 
+When you do need a local engine, `install-dockerd`
+installs `docker-ce` and `containerd.io` on demand
+from the Docker repository already configured in the
+image. Running it needs a privileged container:
+
+```bash
+docker run -it --rm --privileged obeoneorg/netshoot:docker
+install-dockerd --start   # installs, starts dockerd, waits for the socket
+docker run --rm hello-world
+```
+
+### Message of the Day
+
+Every variant prints a short message when an
+interactive shell starts on a terminal: a few
+example commands and the notes for that variant.
+It shows once per `docker run` or `docker exec`,
+not again in nested shells or tmux panes. Hide it
+with `-e NETSHOOT_NO_MOTD=1`. The fragments live in
+`/etc/netshoot/motd.d/`.
+
 ### Pulling Specific Variants
 
 ```bash
@@ -244,7 +265,7 @@ organized by category:
 | HTTP/HTTPS | curl, wget, httpie, apache2-utils (ab) |
 | WebSocket | websocat |
 | Remote Access | openssh-client, telnet |
-| Data Transfer | socat, rsync, magic-wormhole |
+| Data Transfer | socat, rsync, wormhole-rs (as `wormhole`) |
 | VPN | wireguard-tools |
 | SMTP Testing | swaks |
 | LDAP | ldap-utils (ldapsearch, ldapwhoami, ...) |
@@ -313,7 +334,7 @@ bind9-dnsutils, bmon, bridge-utils, conntrack, curl,
 dhcpdump, ethtool, fping, hping3, httpie, iftop,
 iperf, iperf3, iproute2, ipset, iptables,
 iputils-ping, iputils-tracepath, ipvsadm, ldap-utils,
-masscan, mtr, netcat-openbsd, net-tools, nethogs,
+masscan, mtr-tiny, netcat-openbsd, net-tools, nethogs,
 netperf, nftables, ngrep, nload, nmap,
 openssh-client, sipcalc, snmp, socat, speedtest,
 sslscan, swaks, tcpdump, tcpflow, tcptraceroute,
@@ -322,9 +343,10 @@ wireguard-tools
 
 **System**: bash, btop, ca-certificates, coreutils,
 file, fzf, git, gnupg, htop, iotop, jq,
-kitty-terminfo, less, lsof, magic-wormhole, man-db,
+kitty-terminfo, less, lsof, man-db,
 ncdu, openssl, procps, python3-venv, rsync, strace,
-sysstat, thefuck, tmux, unzip, util-linux, vim, zip,
+sysstat, thefuck, tmux, unzip, util-linux, vim,
+wormhole-rs, zip,
 zsh
 
 **Upstream releases** (not packaged, or too old, in
@@ -339,7 +361,7 @@ fast-syntax-highlighting
 bind9-dnsutils, btop, ca-certificates, coreutils,
 curl, ethtool, file, fping, git, httpie, iperf3,
 iproute2, iputils-ping, iputils-tracepath, jq,
-kitty-terminfo, less, lsof, mtr, netcat-openbsd,
+kitty-terminfo, less, lsof, mtr-tiny, netcat-openbsd,
 net-tools, nmap, openssh-client, procps, rsync,
 socat, strace, tcpdump, telnet, tmux, traceroute,
 unzip, util-linux, vim, wget, whois, zip, zsh, plus

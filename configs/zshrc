@@ -10,6 +10,20 @@ if [[ -z "$_NETSHOOT_USER_ZSHRC" && -f "$HOME/.zshrc" && ! "$HOME/.zshrc" -ef "$
   return
 fi
 
+# Message of the day: the fragments in /etc/netshoot/motd.d, in name order
+# (common text, variant notes, footer). Interactive shells on a terminal only,
+# and never when NETSHOOT_NO_MOTD is set. The exported guard is inherited by
+# child shells (omz reload's exec zsh, nested zsh, tmux panes), so it shows
+# once per `docker run` / `docker exec`. It must print before the instant prompt
+# block below: console output after it triggers a Powerlevel10k warning.
+if [[ -o interactive && -t 1 && -z "$NETSHOOT_NO_MOTD" && -z "$_NETSHOOT_MOTD_SHOWN" ]]; then
+  for _netshoot_motd in /etc/netshoot/motd.d/*(N); do
+    cat -- "$_netshoot_motd"
+  done
+  unset _netshoot_motd
+  export _NETSHOOT_MOTD_SHOWN=1
+fi
+
 ZSH_DISABLE_COMPFIX=true
 
 # Pick a writable cache directory: $XDG_CACHE_HOME or ~/.cache when usable,

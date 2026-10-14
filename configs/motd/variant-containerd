@@ -1,0 +1,2 @@
+  Variant   containerd: nerdctl full, containerd started by the entrypoint (needs --privileged)
+            Logs: /var/log/containerd.log

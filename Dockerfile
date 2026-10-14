@@ -21,7 +21,7 @@ FROM ghcr.io/astral-sh/uv:0.12.18@sha256:3adc3706091ce7c2fe595e669628caedd6d9515
 # Base Stage: Debian Trixie with Essential Tools and Shell Enhancements
 # ==============================================================================
 # The tag is kept next to the digest so Dependabot can bump the digest.
-FROM debian:trixie@sha256:9cc080028c43b27d2074d63a5f9caf7166d731494965616c1a6d2827a004585c AS base
+FROM debian:trixie-slim@sha256:a29215f6a35e51e22adffa17f89e9d2ef06214e64a2bad10d765c46aea49f11f AS base
 
 ARG TARGETARCH
 
@@ -48,6 +48,11 @@ RUN <<EOT
     echo 'Binary::apt::APT::Keep-Downloaded-Packages "true";' > /etc/apt/apt.conf.d/keep-cache
 EOT
 
+# Do not install package docs and message translations (~150 MB): nobody reads
+# /usr/share/doc in a debug container. Copyright files stay for license
+# compliance. Man pages are kept on purpose (man-db is installed below).
+COPY --link configs/dpkg-excludes /etc/dpkg/dpkg.cfg.d/netshoot-excludes
+
 # Upgrade all packages to their latest versions.
 # Uses BuildKit cache mounts with sharing=locked for parallel builds safety.
 # CACHE_BUST (the ISO week, passed by CI and build.sh) invalidates this layer
@@ -70,9 +75,11 @@ RUN --mount=type=cache,target=/var/cache/apt,id=apt-cache-${TARGETARCH},sharing=
     set -eux
 
     # Make sure man pages are not excluded by a dpkg path-exclude rule, so that
-    # man-db has something to index. The pinned debian:trixie image ships no such
-    # rule today: this is a no-op guard in case a future digest adds one.
-    sed -i '\|^path-exclude=/usr/share/man|d' /etc/dpkg/dpkg.cfg.d/*
+    # man-db has something to index. debian:trixie-slim ships such a rule
+    # (`path-exclude /usr/share/man/*`, space-separated); dpkg also accepts the
+    # `=` form, so match both. Man pages of packages already in the base layer
+    # stay missing; every package installed below gets its pages.
+    sed -i -E '\|^path-exclude[= ]/usr/share/man|d' /etc/dpkg/dpkg.cfg.d/*
 
     # Core system tools (rarely change)
     CORE_TOOLS=(
@@ -104,7 +111,6 @@ RUN --mount=type=cache,target=/var/cache/apt,id=apt-cache-${TARGETARCH},sharing=
         jq
         kitty-terminfo
         lsof
-        magic-wormhole
         ncdu
         python3-venv
         rsync
@@ -112,6 +118,7 @@ RUN --mount=type=cache,target=/var/cache/apt,id=apt-cache-${TARGETARCH},sharing=
         sysstat
         thefuck
         tmux
+        wormhole-rs
     )
 
     # Networking tools
@@ -139,7 +146,7 @@ RUN --mount=type=cache,target=/var/cache/apt,id=apt-cache-${TARGETARCH},sharing=
         ipvsadm
         ldap-utils
         masscan
-        mtr
+        mtr-tiny
         net-tools
         netcat-openbsd
         nethogs
@@ -174,6 +181,10 @@ RUN --mount=type=cache,target=/var/cache/apt,id=apt-cache-${TARGETARCH},sharing=
         "${CORE_TOOLS[@]}" \
         "${SYSTEM_TOOLS[@]}" \
         "${NETWORKING_TOOLS[@]}"
+
+    # wormhole-rs replaces the Python magic-wormhole (and its Twisted stack);
+    # keep the usual `wormhole` command name. Same send/receive protocol.
+    ln -s /usr/bin/wormhole-rs /usr/local/bin/wormhole
 EOT
 
 # Install official Ookla speedtest CLI.
@@ -298,6 +309,12 @@ COPY --link configs/zshrc /etc/zsh/netshoot/.zshrc
 COPY --link configs/p10k.zsh /etc/zsh/netshoot/.p10k.zsh
 COPY --link --chmod=755 tools/transfer.sh /usr/local/bin/transfer.sh
 
+# Message of the day, printed by the zshrc in name order. Each variant stage
+# replaces 50-variant with its own notes.
+COPY --link configs/motd/netshoot /etc/netshoot/motd.d/10-netshoot
+COPY --link configs/motd/variant-base /etc/netshoot/motd.d/50-variant
+COPY --link configs/motd/footer /etc/netshoot/motd.d/90-footer
+
 # Set the working directory and default command.
 WORKDIR /root
 CMD ["zsh"]
@@ -341,6 +358,11 @@ RUN --mount=type=cache,target=/var/cache/apt,id=apt-cache-${TARGETARCH},sharing=
         docker-compose-plugin
 EOT
 
+# On-demand engine: `install-dockerd [--start]` installs docker-ce and
+# containerd.io from the repository configured above (needs --privileged to run).
+COPY --link --chmod=755 tools/install-dockerd.sh /usr/local/bin/install-dockerd
+COPY --link configs/motd/variant-docker /etc/netshoot/motd.d/50-variant
+
 # ==============================================================================
 # Podman Stage: Installs Podman and related tools
 # ==============================================================================
@@ -364,6 +386,7 @@ EOT
 
 # Copy Podman storage configuration file.
 COPY --link configs/podman-storage.conf /root/.config/containers/storage.conf
+COPY --link configs/motd/variant-podman /etc/netshoot/motd.d/50-variant
 
 # ==============================================================================
 # nerdctl Stage: Installs nerdctl (client only version)
@@ -382,6 +405,8 @@ RUN --mount=type=bind,source=scripts,target=/tmp/scripts \
     --mount=type=cache,target=/tmp/nerdctl,id=nerdctl-${TARGETARCH} \
     --mount=type=secret,id=github_token,env=GITHUB_TOKEN \
     bash /tmp/scripts/install-nerdctl.sh client
+
+COPY --link configs/motd/variant-nerdctl /etc/netshoot/motd.d/50-variant
 
 # ==============================================================================
 # Containerd/nerdctl Stage: Installs nerdctl (full version with containerd)
@@ -403,5 +428,6 @@ RUN --mount=type=bind,source=scripts,target=/tmp/scripts \
 
 # Copy the entrypoint script for containerd.
 COPY --link --chmod=755 entrypoint-containerd.sh /entrypoint.sh
+COPY --link configs/motd/variant-containerd /etc/netshoot/motd.d/50-variant
 
 ENTRYPOINT ["/entrypoint.sh"]

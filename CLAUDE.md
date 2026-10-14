@@ -79,13 +79,13 @@ Both Dockerfiles start with a named `uv` stage (`FROM ghcr.io/astral-sh/uv:<ver>
 ```text
 uv (ghcr.io/astral-sh/uv@sha256) ──COPY /uv /uvx──┐
                                                   ▼
-                           debian:trixie@sha256 → base → docker
+                           debian:trixie-slim@sha256 → base → docker
                                                        → podman
                                                        → nerdctl
                                                        → containerd
 ```
 
-The base image is pinned as `debian:trixie@sha256:<digest>` (tag kept so Dependabot bumps the digest), in both Dockerfiles. `.github/workflows/dependabot-auto-merge.yml` never auto-merges docker-ecosystem PRs: the gatekeeper does not build Dependabot PRs, so a maintainer approves, re-runs the build (smoke test) and merges by hand.
+The base image is pinned as `debian:trixie-slim@sha256:<digest>` (the slim variant: no docs, man pages or translations in the base layer) (tag kept so Dependabot bumps the digest), in both Dockerfiles. `.github/workflows/dependabot-auto-merge.yml` never auto-merges docker-ecosystem PRs: the gatekeeper does not build Dependabot PRs, so a maintainer approves, re-runs the build (smoke test) and merges by hand.
 
 - **`base`**: Installs all networking/system tools, the upstream-release binaries, Zsh with Oh My Zsh + Powerlevel10k, plugins, and helper scripts
 - **`docker`**: Docker CLI only (`docker-ce-cli`, `docker-buildx-plugin`, `docker-compose-plugin`) from Docker's official apt repo. No `dockerd`, no `containerd.io`: users mount the host socket (`-v /var/run/docker.sock:/var/run/docker.sock`)
@@ -136,7 +136,8 @@ Version override build args (all default to empty = latest):
 - **Shell**: `SHELL ["/bin/bash", "-o", "pipefail", "-c"]` in the base stage, and heredoc RUN bodies use `set -eux`.
 - **gitstatus binary persistence**: The Powerlevel10k gitstatus install uses `GITSTATUS_CACHE_DIR=$ZSH/custom/themes/powerlevel10k/gitstatus/usrbin`, a path *outside* the `/root/.cache` cache mount. Without this, the compiled binary would live only in the cache mount and be absent from the final image layer.
 - **Locale**: `LANG=C.UTF-8`, the only UTF-8 locale built into Debian without the `locales` package (`en_US.UTF-8` is not generated, and `man` complained about it on every call).
-- **man pages**: `man-db` is installed in the full image. Before the install, any dpkg `path-exclude=/usr/share/man` rule in `/etc/dpkg/dpkg.cfg.d/` is removed so pages actually land (the pinned image has none today; it is a guard).
+- **man pages**: `man-db` is installed in the full image. Before the install, any dpkg `path-exclude /usr/share/man` rule in `/etc/dpkg/dpkg.cfg.d/` is removed so pages actually land. debian:trixie-slim ships one in the space-separated form, so the sed matches both `path-exclude=` and `path-exclude `. Man pages of packages already in the base layer (bash, coreutils...) stay missing.
+- **dpkg excludes**: `configs/dpkg-excludes` is copied to `/etc/dpkg/dpkg.cfg.d/netshoot-excludes` in both Dockerfiles before any apt step, so `/usr/share/doc` (except `copyright`) and `/usr/share/locale` are skipped. Man pages are not excluded. Use `mtr-tiny`, never `mtr` (GTK build): the smoke test fails if `libgtk-3-0t64` is installed.
 
 ### Shell Layout (works for root and any uid)
 
@@ -155,6 +156,9 @@ Version override build args (all default to empty = latest):
 - `configs/p10k.zsh` — Powerlevel10k theme configuration (installed as `/etc/zsh/netshoot/.p10k.zsh`)
 - `configs/podman-storage.conf` — Podman storage config for rootless operation
 - `tools/transfer.sh` — File transfer helper script (installed to `/usr/local/bin/transfer.sh`)
+- `tools/install-dockerd.sh`: docker variant only, installed as `/usr/local/bin/install-dockerd`: installs `docker-ce` + `containerd.io` on demand from the already configured Docker apt repo; `--start` launches dockerd and waits for it (needs `--privileged`)
+- `configs/motd/`: message of the day fragments, copied to `/etc/netshoot/motd.d/` (`10-netshoot` common text, `50-variant` replaced by each variant stage, `90-footer`); `configs/zshrc` prints them before the p10k instant prompt, on a tty only, once per `docker run`/`docker exec` (exported guard `_NETSHOOT_MOTD_SHOWN`), never with `NETSHOOT_NO_MOTD` set
+- `configs/dpkg-excludes`: dpkg path-exclude rules (docs and translations), see Key Design Patterns
 - `entrypoint-containerd.sh` — Entrypoint for containerd variant (starts containerd daemon, then exec's the user command)
 
 ### Installation Scripts
@@ -269,10 +273,10 @@ The CI workflow uses `type=gha` (GitHub Actions cache, `scope=buildkit-<variant>
 There is no `make`, `npm`, or test runner; the checks are plain scripts and CI workflows.
 
 - **Smoke test**: `tests/smoke.sh <variant> <image>` (variants: `base`, `slim`, `docker`, `podman`, `nerdctl`, `containerd`) runs every check in `docker run --rm --entrypoint /bin/bash <image> -c '...'` (entrypoint overridden so the containerd variant needs no privileges) and reports PASS/FAIL per check, exiting 1 on any failure. It checks: expected binaries present and removed ones (dstat, sudo) absent (pip/pip3 are not checked: `httpie` and `python3-venv` depend on `python3-pip` in trixie, so pip stays installed), per variant; functional checks (grpcurl, witr, doggo, websocat, kubectl, `check-tls --help` as uid 1000, `python3 -m venv`, `man -w tcpdump` on the full image); an interactive zsh as root and as `--user 1000:1000`, both without a terminal and on a `docker run -t` pty (`timeout --foreground -k`), which must print a probe marker proving the bundled config loaded (`ZSH=/opt/oh-my-zsh`, `p10k` defined, `ZSH_COMPDUMP` set), with no error output and no newuser/p10k wizard; variant tools (docker CLI + buildx + compose with `dockerd` absent, podman, nerdctl, containerd + nerdctl). Run it on a locally built image; CI runs it for every variant before pushing.
-- **Lint** (`.github/workflows/lint.yaml`, on `pull_request` and push to `main`, `contents: read`): shellcheck on `build.sh`, `entrypoint-containerd.sh`, `tools/transfer.sh`, `scripts/*.sh` and `tests/*.sh` (`scripts/lib.sh` is sourced, the install scripts point shellcheck at it with a `source` directive); hadolint on `Dockerfile` and `Dockerfile.slim` with `.hadolint.yaml` (it ignores no rule globally: rules are ignored inline with `# hadolint ignore=<rule>` above the instruction, with a justification comment); actionlint on the workflows. Linter binaries are pinned by version and SHA256 in the workflow.
+- **Lint** (`.github/workflows/lint.yaml`, on `pull_request` and push to `main`, `contents: read`): shellcheck on `build.sh`, `entrypoint-containerd.sh`, `tools/*.sh`, `scripts/*.sh` and `tests/*.sh` (`scripts/lib.sh` is sourced, the install scripts point shellcheck at it with a `source` directive); hadolint on `Dockerfile` and `Dockerfile.slim` with `.hadolint.yaml` (it ignores no rule globally: rules are ignored inline with `# hadolint ignore=<rule>` above the instruction, with a justification comment); actionlint on the workflows. Linter binaries are pinned by version and SHA256 in the workflow.
 - README.md must stay markdownlint-clean per `.markdownlint.json` (80-column lines outside code blocks and tables).
 
-All shell scripts (`build.sh`, `entrypoint-containerd.sh`, `tools/transfer.sh`, `scripts/*.sh`, `tests/*.sh`) use `bash` and must pass shellcheck.
+All shell scripts (`build.sh`, `entrypoint-containerd.sh`, `tools/*.sh`, `scripts/*.sh`, `tests/*.sh`) use `bash` and must pass shellcheck.
 
 ## Development Notes
 

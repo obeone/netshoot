@@ -1,0 +1,2 @@
+  Variant   nerdctl: client only
+            Host containerd: -v /run/containerd/containerd.sock:/run/containerd/containerd.sock

@@ -1,0 +1,7 @@
+netshoot slim: reduced network troubleshooting toolkit (https://github.com/obeone/netshoot)
+  Capture   tcpdump -ni any port 53
+  DNS       dig +short example.com
+  Path      mtr 1.1.1.1                ss -tulpn
+  HTTP/TLS  curl -v https://host       check-tls host
+  Share     transfer.sh send <file>
+  Variant   slim: reduced toolset, no container runtime

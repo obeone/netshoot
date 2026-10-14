@@ -65,7 +65,7 @@ FULL_PRESENT=(
     # System
     btop htop iotop iostat lsof strace ncdu rsync file
     # Shell, editors and utilities
-    zsh bash tmux vim less man git jq fzf thefuck wormhole
+    zsh bash tmux vim less man git jq fzf thefuck wormhole wormhole-rs
     gpg openssl unzip zip python3 uv uvx transfer.sh
 )
 # Removed from the full image on purpose. pip/pip3 are not listed: python3-pip
@@ -248,6 +248,16 @@ check "install scripts are not left in the image" -- \
     '! compgen -G "/tmp/install-*.sh" >/dev/null && [[ ! -e /tmp/scripts ]]'
 check "no zsh configuration in /root" -- \
     '[[ ! -e /root/.zshrc && ! -e /root/.p10k.zsh && ! -e /root/.oh-my-zsh ]]'
+# Size guards: the GTK build of mtr drags in a whole desktop stack, and dpkg
+# must skip docs and translations (copyright files excepted). Packages of the
+# debian base image predate the exclude rules, so probe one we install: git.
+check "no GTK in the image (mtr-tiny, not mtr)" -- \
+    '! dpkg -s libgtk-3-0t64 >/dev/null 2>&1'
+# shellcheck disable=SC2016 # expanded inside the container
+check "no package docs or translations (git)" -- \
+    '[[ -f /usr/share/doc/git/copyright ]] &&
+     [[ -z "$(find /usr/share/doc/git -type f ! -name copyright -print -quit)" ]] &&
+     [[ -z "$(find /usr/share/locale -name git.mo -print -quit)" ]]'
 if [[ "$VARIANT" != slim ]]; then
     check "grpcurl --version" -- 'grpcurl --version'
     check "doggo --version" -- 'doggo --version'
@@ -262,6 +272,21 @@ check_zsh "zsh loads the bundled config as uid 1000" notty --user 1000:1000
 check_zsh "zsh on a tty as root" tty
 check_zsh "zsh on a tty as uid 1000" tty --user 1000:1000
 
+echo
+echo "== Message of the day"
+# script(1) gives zsh a pseudo-terminal, as an interactive docker run -t does.
+# shellcheck disable=SC2016 # expanded inside the container
+motd_count='timeout 60 script -qec "$1" /dev/null | grep -c "Hide this message" || true'
+# shellcheck disable=SC2016 # expanded inside the container
+check "motd shows the ${VARIANT} variant notes on a tty" -- \
+    'timeout 60 script -qec "zsh -ic true" /dev/null | grep -q "Variant   $1:"' "$VARIANT"
+check "motd is shown once, not again in a nested zsh" -- \
+    "[[ \$($motd_count) -eq 1 ]]" 'zsh -ic "zsh -ic true"'
+check "motd is hidden with NETSHOOT_NO_MOTD=1" -e NETSHOOT_NO_MOTD=1 -- \
+    "[[ \$($motd_count) -eq 0 ]]" 'zsh -ic true'
+check "motd is not printed without a terminal" -- \
+    '! zsh -ic true 2>&1 | grep -q "Hide this message"'
+
 case "$VARIANT" in
     docker)
         echo
@@ -271,6 +296,10 @@ case "$VARIANT" in
         check "docker compose version" -- 'docker compose version'
         # CLI only: no engine and no containerd in this variant.
         check_binaries absent dockerd containerd
+        # The engine is opt-in through the bundled helper.
+        check "install-dockerd --help" -- 'install-dockerd --help | grep -q -- --start'
+        check "install-dockerd refuses non-root" --user 1000:1000 -- \
+            '! install-dockerd 2>/dev/null'
         ;;
     podman)
         echo
