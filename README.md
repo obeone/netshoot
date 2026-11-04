@@ -651,7 +651,7 @@ bash tests/smoke.sh docker my-netshoot:docker
 The variant is one of `base`, `slim`, `docker`,
 `podman`, `nerdctl` or `containerd`.
 
-See [CLAUDE.md](CLAUDE.md) for detailed build system
+See [AGENTS.md](AGENTS.md) for detailed build system
 documentation.
 
 ## Contributing
@@ -673,7 +673,7 @@ Pull requests are checked by the lint workflow
 actionlint) and by the build workflow, which runs
 the smoke test on every variant.
 
-Check out [CLAUDE.md](CLAUDE.md) for development
+Check out [AGENTS.md](AGENTS.md) for development
 guidelines and architecture details.
 
 ## CI/CD
