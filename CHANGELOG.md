@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.0.1](https://github.com/obeone/netshoot/compare/v2.0.0...v2.0.1) (2026-11-04)
+
+
+### Documentation
+
+* consolidate project instructions in AGENTS.md ([81fe9a7](https://github.com/obeone/netshoot/commit/81fe9a7b130b28e008aeb695b224912df004aa36))
+
 ## [2.0.0](https://github.com/obeone/netshoot/compare/v1.2.1...v2.0.0) (2026-09-25)
 
 
